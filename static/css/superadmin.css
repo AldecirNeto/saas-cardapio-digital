@@ -1,0 +1,29 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f1f5f9; margin: 0; padding: 0; }
+.sidebar { background-color: #1e293b; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+.sidebar h1 { margin: 0; font-size: 24px; color: #38bdf8; }
+.btn-sair { color: #94a3b8; text-decoration: none; font-weight: bold; }
+.container { padding: 40px; max-width: 1200px; margin: 0 auto; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 40px; }
+.card-dash { background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155; }
+.card-dash h3 { margin: 0 0 10px 0; color: #94a3b8; font-size: 14px; text-transform: uppercase; }
+.card-dash .valor { font-size: 32px; font-weight: 800; color: #f8fafc; }
+.card-dash.destaque { border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+.box { background-color: #1e293b; padding: 30px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 30px; }
+.box h2 { margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 25px; color: #f8fafc; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 15px; text-align: left; border-bottom: 1px solid #334155; }
+th { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+tbody tr:hover { background-color: #0f172a; }
+.badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+.badge-ativo { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.badge-bloqueado { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.badge-plano { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+.btn-toggle { background: #334155; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold; }
+.btn-toggle:hover { background: #475569; }
+.btn-config { background: #eab308; color: #000; padding: 8px 12px; border-radius: 6px; border: none; font-size: 12px; font-weight: bold; cursor: pointer; }
+.btn-salvar { background: #22c55e; color: white; padding: 8px 15px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+input, select { width: 100%; padding: 12px; margin-bottom: 15px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; box-sizing: border-box; }
+.input-fin { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; text-align: center; font-weight: bold;}
+.input-fin:focus { border-color: #38bdf8; outline: none; }

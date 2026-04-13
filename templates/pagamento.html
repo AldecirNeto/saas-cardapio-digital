@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido Confirmado!</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/cliente.css') }}?v=2.0">
+</head>
+<body>
+
+    <div class="card-sucesso">
+        <h2>✅ Pedido Confirmado!</h2>
+        
+        <p class="texto-mesa">Seu pedido <strong>#{{ pedido_id }}</strong> já está na cozinha.</p>
+        <p class="texto-mesa">Mesa: <strong>{{ mesa }}</strong></p>
+
+        <div class="valor-total-destaque">R$ {{ "%.2f"|format(total) }}</div>
+        <p class="texto-mesa">Forma escolhida: <strong>{{ forma_pagamento }}</strong></p>
+
+        {% if forma_pagamento == 'PIX' %}
+            <div class="pix-box">
+                <p style="margin: 0; font-size: 14px; color: #64748b;">Nossa Chave PIX:</p>
+                <span id="chavePix" style="font-size: 18px; font-weight: 800; display: block; margin: 10px 0;">{{ chave_pix }}</span>
+                <p style="margin: 0; font-size: 12px; color: #94a3b8;">Titular: Hamburgueria do Neto</p>
+            </div>
+            
+            <button onclick="copiarPix()" id="btnCopiar" class="btn-copiar-pix">
+                📋 Copiar Chave
+            </button>
+            
+            <p class="texto-mesa" style="margin-top: 20px; font-size: 14px;">Faça o PIX e envie o comprovante no WhatsApp:</p>
+        {% else %}
+            <p class="texto-mesa" style="margin-top: 25px; font-size: 14px;">Já estamos preparando seu pedido! Nosso garçom levará a maquininha até você.</p>
+            <p class="texto-mesa" style="font-size: 14px; margin-bottom: 20px;">Se quiser adiantar algo, avise no nosso WhatsApp:</p>
+        {% endif %}
+
+        <button onclick="enviarComprovante()" class="btn-whatsapp" style="width: 100%; border: none; cursor: pointer;">
+            📲 Enviar Mensagem no WhatsApp
+        </button>
+
+        <div id="form-voltar">
+            <a href="{{ url_voltar if url_voltar.startswith('/') else '/' + url_voltar }}" class="btn-voltar" style="text-align: center;">
+                ⬅️ Voltar ao Cardápio
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function copiarPix() {
+            var textoChave = document.getElementById("chavePix").innerText;
+            
+            navigator.clipboard.writeText(textoChave).then(function(){
+                var botao = document.getElementById("btnCopiar");
+                botao.innerHTML = "Copiado! ✅"
+                
+                // Mudança de cor usando padrão HEX do CSS Premium
+                botao.style.backgroundColor = "#22c55e"; 
+                botao.style.color = "#fff";
+
+                //volta o botao ao normal dps de 3 seg
+                setTimeout(function(){
+                    botao.innerHTML = "📋 Copiar Chave";
+                    botao.style.backgroundColor = ""; 
+                    botao.style.color = "";
+                }, 3000);
+            })
+        }
+    </script>
+    <script>
+        function enviarComprovante(){
+            const telefoneRestaurante = "{{ telefone_whatsapp }}";
+            const formaPagamento = "{{ forma_pagamento }}"; 
+
+            let tituloZap = "";
+            let textoPagamento = "";
+            let textoRodape = "";
+
+            if (formaPagamento === "PIX") {
+                tituloZap = "*NOVO PEDIDO - COMPROVANTE PIX* 🧾";
+                textoPagamento = "PIX";
+                textoRodape = "Segue o meu comprovante de pagamento em anexo!";
+            } else {
+                tituloZap = "*NOVO PEDIDO - MAQUININHA* 💳";
+                textoPagamento = "Cartão (Levar a Maquininha)";
+                textoRodape = "Aguardando o pedido. Por favor, não esqueça a maquininha!";
+            }
+
+            const texto = `${tituloZap}
+*Cliente:* {{ nome_cliente or 'Não informado' }}
+*Pedido:* #{{ pedido_id }}
+*Mesa:* {{ mesa }}
+
+*Resumo do Pedido:*
+{{ itens }}
+
+*Total a Pagar:* *R$ {{ "%.2f"|format(total)}}*
+*Forma de Pagamento:* ${textoPagamento}
+
+${textoRodape}`;
+
+            const linkWpp = `https://wa.me/${telefoneRestaurante}?text=${encodeURIComponent(texto)}`;
+            
+            window.open(linkWpp, '_blank');              
+        }
+    </script>
+</body>
+</html>

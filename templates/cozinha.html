@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel da Cozinha (KDS)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/operacao.css') }}">
+</head>
+<body class="{{ tema_kds }}">
+
+    <div class="header-cozinha">
+        <h1>🔥 KDS - Cozinha</h1>
+        <div class="aviso-refresh">🔄 Atualiza a cada 15s</div>
+    </div>
+    
+    <div class="grid-pedidos">
+        {% for pedido in pedidos %}
+            <div class="ticket">
+                
+                <div class="ticket-header">
+                    <h2 class="mesa-titulo">Mesa {{ pedido[1] }}</h2>
+                    <span class="id-pedido">#{{ pedido[0] }}</span>
+                </div>
+                
+                <div class="ticket-body">
+                    <div class="info-topo">
+                        <span class="horario-pedido">🕒 {{ pedido[5] }}</span>
+                        <span class="badge-pagamento">💰 {{ pedido[4] }}</span>
+                    </div>
+
+                    <ul class="lista-itens">
+                        {% for item in pedido[2].split(', ') %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    {% if pedido[6] %}
+                        <div class="alerta-obs">
+                            ⚠️ OBS: {{ pedido[6] }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <form action="/pronto/{{ pedido[0] }}" method="POST" class="form-pronto">
+                    <button type="submit" class="btn-pronto">✔️ Pronto</button>
+                </form>
+
+            </div>
+        {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; margin-top: 100px;">
+                <h2 style="color: #2ecc71; font-size: 40px;">A chapa está limpa! 🍻</h2>
+                <p style="color: #888; font-size: 24px;">Nenhum pedido pendente no momento.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        // TRUQUE DE TECH LEAD: Colocamos entre aspas "" e convertemos para Número (Number), assim o VS Code não acusa erro!
+        const totalPedidosAtual = Number("{{ pedidos|length }}");
+        const totalAnterior = sessionStorage.getItem('qtd_pedidos_cozinha');
+
+        // Se o número de pedidos agora for maior que o guardado na memória, toca o BIP!
+        if (totalAnterior !== null && totalPedidosAtual > Number(totalAnterior)) {
+            const somBip = new Audio('/static/audio/bip-geral.mp3');
+            somBip.play().catch(e => console.log("Áudio bloqueado pelo navegador. Clique na tela para liberar.", e));
+        }
+        
+        sessionStorage.setItem('qtd_pedidos_cozinha', totalPedidosAtual);
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 15000);
+    </script>
+</body>
+</html>

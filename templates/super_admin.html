@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Admin - Digital Menu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/superadmin.css') }}">
+</head>
+<body>
+
+    <header class="sidebar">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <h1>🚀 SaaS Control - Digital Menu <small style="font-size: 12px; color: #94a3b8;">v2.0</small></h1>
+            <nav style="display: flex; gap: 15px;">
+                <a href="/superadmin" style="color: #38bdf8; text-decoration: none; font-weight: bold;">🏢 Clientes</a>
+                <a href="/superadmin/financeiro" style="color: #94a3b8; text-decoration: none; font-weight: bold;">💰 Financeiro</a>
+            </nav>
+        </div>
+        <a href="/logout" class="btn-sair">Sair do Sistema</a>
+    </header>
+
+    <div class="container">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="grid-stats">
+            <div class="card-stat">
+                <h3>Restaurantes Ativos</h3>
+                <div class="valor">{{ total_res }}</div>
+            </div>
+            <div class="card-stat">
+                <h3>Pedidos Trafegados</h3>
+                <div class="valor">{{ total_ped }}</div>
+            </div>
+            <div class="card-stat">
+                <h3>Status da Rede</h3>
+                <div class="valor" style="color: #34d399; font-size: 20px;">● Online</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div class="box">
+                <h2>➕ Novo Restaurante</h2>
+                <form action="/superadmin/cadastrar" method="POST">
+                    <label>Nome do Estabelecimento:</label>
+                    <input type="text" name="nome_restaurante" placeholder="Ex: Pizzaria do Bairro" required>
+
+                    <label>E-mail do Dono (Login):</label>
+                    <input type="email" name="email_dono" placeholder="dono@email.com" required>
+
+                    <label>Senha Provisória:</label>
+                    <input type="password" name="senha_dono" placeholder="Senha inicial" required>
+
+                    <label>Telefone WhatsApp (com 55):</label>
+                    <input type="text" name="'telefone_whatsapp" placeholder="Ex: 5511999999999" required>
+
+                    <label> Chave PIX do Restaurante:</label>
+                    <input type="text" name="chave_pix" placeholder="E-mail, CPF, Celular, CNPJ..." required>
+
+                    <label>Plano de Assinatura:</label>
+                    <select name="plano" style="width: 100%; padding: 12px; margin-bottom: 20px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white;">
+                        <option value="salao">Plano Salão (QR Code, KDS e Caixa)</option>
+                        <option value="delivery">Plano Delivery (+ Entregas e WhatsApp)</option>
+                        <option value="premium">Plano Premium (+ Relatórios e Cupons)</option>
+                    </select>
+
+                    <label>Cor do Tema (Hex):</label>
+                    <input type="color" name="cor_tema" value="#e67e22" style="height: 50px; cursor: pointer;">
+
+                    <button type="submit" class="btn-cadastrar">Criar Tenant</button>
+                </form>
+            </div>
+
+            <div class="box">
+                <h2>📋 Gestão de Clientes</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Restaurante</th>
+                            <th>Status</th>
+                            <th>Plano Atual</th> <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in restaurantes %}
+                        <tr>
+                            <td>#{{ res[0] }}</td>
+                            <td>
+                                <strong>{{ res[1] }}</strong><br>
+                                <small style="color: #94a3b8;">/{{ res[2] }}</small>
+                            </td>
+                            <td>
+                                {% if res[3] == 'ativo' %}
+                                    <span class="badge badge-ativo">ATIVO</span>
+                                {% else %}
+                                    <span class="badge badge-bloqueado">BLOQUEADO</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <form action="/superadmin/mudar_plano/{{ res[0] }}" method="POST" style="display: flex; gap: 5px; align-items: center; margin: 0;">
+                                    <select name="plano" style="padding: 6px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px; font-size: 13px; outline: none;">
+                                        <option value="salao" {% if res[9] == 'salao' or not res[9] or res[9] == 'basico' %}selected{% endif %}>Salão</option>
+                                        <option value="delivery" {% if res[9] == 'delivery' %}selected{% endif %}>Delivery</option>
+                                        <option value="premium" {% if res[9] == 'premium' %}selected{% endif %}>Premium</option>
+                                    </select>
+                                    <button type="submit" title="Salvar Plano" style="background: #0ea5e9; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+                                        🔄
+                                    </button>
+                                </form>
+                            </td>
+
+                            <td style="display: flex; gap: 10px;">
+                                <button onclick="abrirConfig('{{ res[0] }}', '{{ res[1] }}', '{{ res[4] }}', '{{ res[5] }}', '{{ res[6] }}', '{{ res[7] }}', '{{ res[8] }}', '{{ res[10] }}', '{{ res[11] }}', '{{ res[12] }}')" style="background: #334155; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">
+                                    ⚙️ Estilo
+                                </button>
+
+                                <a href="/superadmin/toggle/{{ res[0] }}" 
+                                class="btn-toggle {% if res[3] == 'ativo' %}btn-bloquear{% else %}btn-ativar{% endif %}">
+                                {% if res[3] == 'ativo' %}🚫{% else %}✅{% endif %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="modalConfig" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+                <div class="box" style="width: 400px; border: 2px solid #38bdf8;">
+                    <h2 id="tituloModal">Configurar Estilo</h2>
+                        <hr style="border: 0; border-top: 1px solid #334155; margin-bottom: 15px;">
+
+                    <form id="formEstilo" method="POST" enctype="multipart/form-data">
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                <div>
+                                    <label>WhatsApp (com 55):</label>
+                                    <input type="text" name="telefone_whatsapp" id="inputTelWpp" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label>Chave PIX:</label>
+                                    <input type="text" name="chave_pix" id="inputChavePix" style="width: 100%; padding: 8px; box-sizing: border-box;">
+                                </div>
+                            </div>
+                            <div style="flex: 1; min-width: 45%;">
+                                <label>Cor dos Botões:</label>
+                                <input type="color" name="cor_tema" id="inputCorTema" style="height: 40px; width: 100%;">
+                            </div>
+                            <div style="flex: 1; min-width: 45%;">
+                                <label>Cor Texto do Botão:</label>
+                                <input type="color" name="cor_texto_botao" id="inputCorTextoBotao" value="#ffffff" style="height: 40px; width: 100%;">
+                            </div>
+                            <div style="flex: 1; min-width: 45%;">
+                                <label>Cor de Fundo (Tela):</label>
+                                <input type="color" name="cor_fundo" id="inputCorFundo" style="height: 40px; width: 100%;">
+                            </div>
+                            <div style="flex: 1; min-width: 45%;">
+                                <label>Cor dos Cards (Balões):</label>
+                                <input type="color" name="cor_card" id="inputCorCard" style="height: 40px; width: 100%;">
+                            </div>
+                            <div style="flex: 1; min-width: 100%;">
+                                <label>Cor dos Títulos (Textos):</label>
+                                <input type="color" name="cor_texto" id="inputCorTexto" style="height: 40px; width: 100%;">
+                            </div>
+                        </div>
+
+                        <label>Tema da Cozinha (KDS):</label>
+                        <select name="tema_kds" id="selectTemaKds" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #334155; border-radius:8px; margin-bottom:20px;">
+                            <option value="dark">Modo Escuro (Padrão)</option>
+                            <option value="light">Modo Claro</option>
+                        </select>
+
+                        <label>Logo do Restaurante (PNG Transparente):</label>
+                        <input type="file" name="logo" accept="image/*" style="background: transparent; border: 1px dashed #334155; padding: 10px; color: white; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: inline-flex; align-items: center; cursor: pointer; color: #f87171; font-weight: bold; font-size: 13px;">
+                                <input type="checkbox" name="remover_logo" value="1" style="width: auto; margin: 0 8px 0 0;"> 🗑️ Remover Logo Atual
+                            </label>
+                        </div>
+
+                        <label>Imagem de Fundo (Wallpaper):</label>
+                        <input type="file" name="fundo" accept="image/*" style="background: transparent; border: 1px dashed #334155; padding: 10px; color: white; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: inline-flex; align-items: center; cursor: pointer; color: #f87171; font-weight: bold; font-size: 13px;">
+                                <input type="checkbox" name="remover_fundo" value="1" style="width: auto; margin: 0 8px 0 0;"> 🗑️ Remover Fundo Atual
+                            </label>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button type="submit" class="btn-cadastrar">💾 Salvar Estilo</button>
+                            <button type="button" onclick="fecharConfig()" style="background:#475569; border:none; color:white; padding:15px; border-radius:8px; cursor:pointer; width: 100%; font-weight: bold;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                function abrirConfig(id, nome, corTema, corFundo, corCard, corTexto, temaKds, corTextoBotao, chavePix, telWpp) {
+                    // Abre o modal e muda o título
+                    document.getElementById('modalConfig').style.display = 'flex';
+                    document.getElementById('tituloModal').innerText = 'Configurar: ' + nome;
+                    
+                    // Atualiza a URL do formulário para o ID correto
+                    document.getElementById('formEstilo').action = '/superadmin/editar_estilo/' + id;
+                    
+                    // Preenche as cores (evitando o 'None' do Python)
+                    if (corTema !== 'None') document.getElementById('inputCorTema').value = corTema;
+                    if (corFundo !== 'None') document.getElementById('inputCorFundo').value = corFundo;
+                    if (corCard !== 'None') document.getElementById('inputCorCard').value = corCard;
+                    if (corTexto !== 'None') document.getElementById('inputCorTexto').value = corTexto;
+                    if (corTextoBotao !== 'None' && document.getElementById('inputCorTextoBotao')) {
+                        document.getElementById('inputCorTextoBotao').value = corTextoBotao;
+                    }
+                    if (temaKds !== 'None') document.getElementById('selectTemaKds').value = temaKds;
+                    
+                    // PREENCHE O PIX E O WHATSAPP NA TELA (A MÁGICA AQUI 👇)
+                    document.getElementById('inputChavePix').value = (chavePix !== 'None' && chavePix !== 'null') ? chavePix : '';
+                    document.getElementById('inputTelWpp').value = (telWpp !== 'None' && telWpp !== 'null') ? telWpp : '';
+                }
+
+                function fecharConfig() {
+                    document.getElementById('modalConfig').style.display = 'none';
+                    document.getElementById('inputChavePix').value = chavePix !== 'None' ? chavePix : '';
+                    document.getElementById('inputTelWpp').value = telWpp !== 'None' ? telWpp : '';
+                }
+            </script>
+        </div>
+
+    </div>
+
+</body>
+</html>

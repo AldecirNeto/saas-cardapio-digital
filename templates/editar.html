@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Produto</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+    <div class="box-editar">
+        <h2 style="margin-top: 0; color: #2c3e50;">✏️ Editar Produto #{{ produto[0] }}</h2>
+        
+        <form action="/admin/editar/{{ produto[0] }}" method="POST" enctype="multipart/form-data">
+            <label>Nome do Lanche:</label>
+            <input type="text" name="nome" value="{{ produto[1] }}" required>
+
+            <label>Descrição / Ingredientes <small style="color: #7f8c8d; font-weight: normal;">(Opcional)</small>:</label>           
+            <textarea name="descricao" rows="3" style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 15px; transition: 0.3s; resize: vertical;">{% if produto|length > 8 and produto[8] %}{{ produto[8] }}{% endif %}</textarea>
+
+            <label>Preço (R$):</label>
+            <input type="number" step="0.01" name="preco" value="{{ produto[2] }}" required>
+
+            <label>Categoria:</label>
+            <select name="categoria" required style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 16px;">
+                {% for cat in categorias_atuais %}
+                    <option value="{{ cat[1] }}" {% if produto|length > 3 and produto[3] == cat[1] %}selected{% endif %}>
+                        {{ cat[1] }}
+                    </option>
+                {% else %}
+                    <option value="Geral">Geral</option>
+                {% endfor %}
+            </select>
+            
+            <label>Nova Foto (Opcional):</label>
+            <small style="display: block; color: #888; margin-bottom: 5px;">Deixe em branco para manter a foto atual.</small>
+            <input type="file" name="imagem" accept="image/*" style="background: #fff; padding: 5px;">
+
+            <button type="submit">💾 Salvar Alterações</button>
+        </form>
+        
+        <a href="/admin" class="btn-voltar">⬅️ Cancelar e Voltar</a>
+    </div>
+
+</body>
+</html>

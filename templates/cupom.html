@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Cupons Premium</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body>
+
+    <header class="admin-header">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <h1>📊 Painel do Gestor</h1>
+            <nav style="display: flex; gap: 15px; margin-left: 30px;">
+                <a href="/admin" style="text-decoration: none; font-weight: bold; color: #94a3b8; font-size: 16px; transition: 0.2s;">🍔 Cardápio & Pedidos</a>
+                <a href="/admin/clientes" style="text-decoration: none; font-weight: bold; color: #94a3b8; font-size: 16px; transition: 0.2s;">👑 CRM & Clientes</a>
+                <a href="/admin/cupons" style="text-decoration: none; font-weight: bold; color: #e74c3c; font-size: 16px; transition: 0.2s;">🎟️ Cupons</a>
+            </nav>
+        </div>
+        <a href="/logout" class="btn-sair">🚪 Sair</a>
+    </header>
+
+    <div class="container">
+        {% if plano != 'premium' %}
+            <div class="badge-premium">
+                <h1 style="font-size: 36px; margin: 0 0 15px 0; font-weight: 800;">🔒 Recurso Exclusivo Premium</h1>
+                <p style="font-size: 20px; margin-bottom: 25px;">O Motor de Cupons e Descontos está disponível apenas no plano Premium.</p>
+                <p>Crie promoções, aumente o ticket médio e fidelize clientes com códigos de desconto personalizados.</p>
+                <br>
+                <a href="https://wa.me/5511999999999?text=Quero%20fazer%20o%20upgrade%20para%20o%20plano%20Premium!" target="_blank" style="background: white; color: #c0392b; padding: 18px 35px; text-decoration: none; border-radius: 10px; font-weight: 800; font-size: 19px; display: inline-block; transition: 0.2s;">🚀 Fazer Upgrade Agora</a>
+            </div>
+        {% else %}
+            
+            <div class="box" style="flex: 1;">
+                <h2>➕ Criar Novo Cupom</h2>
+                <form action="/admin/cupons/novo" method="POST">
+                    <label>Código do Cupom <small>(Ex: BEMVINDO10)</small></label>
+                    <input type="text" name="codigo" placeholder="Digite o código" required style="text-transform: uppercase;">
+                    
+                    <div style="display: flex; gap: 17px;">
+                        <div style="flex: 1;">
+                            <label>Tipo de Desconto</label>
+                            <select name="tipo" required>
+                                <option value="porcentagem">Porcentagem(%)</option>
+                                <option value="fixo">Valor Fixo (R$)</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label>Valor do Desconto</label>
+                            <input type="number" step="0.01" name="valor" placeholder="Ex: 10 ou 15.50" required>
+                        </div>
+                    </div>
+
+                    <label>Valor Mínimo do Pedido (R$) <small>(0 = Sem Mínimo)</small></label>
+                    <input type="number" step="0.01" name="valor_minimo" value="0" required>
+
+                    <label style="border-top: 2px dashed #e9ecef; padding-top: 20px; margin-top: 10px;">Comportamento do Limite</label>
+                    <select name="tipo_limite" required style="border-color: #a0aec0; background-color: #fdfdfd;">
+                        <option value="global">🌍 Global (Escassez: Os primeiros que usarem)</option>
+                        <option value="por_cliente">👤 Por Cliente (Fidelidade: 1 uso por pessoa)</option>
+                    </select>
+
+                    <div style="display: flex; gap: 15px;">
+                        <div style="flex: 1;">
+                            <label>Qtd. Total de Usos <small>(0 = SEM LIMITE)</small></label>
+                            <input type="number" name="limite_uso" value="0" required>
+                        </div>
+                        
+                    </div>
+
+                    <label style="color: #1e40af;">🎯 Meta de Fidelidade <small>(Exclusivo pro Pedido Nº)</small></label>
+                    <input type="number" name="meta_pedidos" value="0" placeholder="Ex: 5" style="border-color: #3498db; background: #f0f9ff; border-width: 2px;" required>
+
+                    <button type="submit">Gerar Cupom</button>
+                </form>
+            </div>
+
+            <div class="box" style="flex: 2;">
+                <h2>🎟️ Cupons e Histórico</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Regras</th>
+                            <th>Usos</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cupom in cupons %}
+                        <tr>
+                            <td><strong style="color: #e74c3c; font-size: 22px; font-weight: 800;">{{ cupom[2] }}</strong></td>
+                            <td>
+                                <strong style="font-size: 20px; color: #1a202c; font-weight: 700;">
+                                    {% if cupom[3] == 'porcentagem' %}{{ cupom[4]|int }}% OFF
+                                    {% else %}R$ {{ "%.2f"|format(cupom[4]) }} OFF{% endif %}
+                                </strong>
+                                <br>
+                                <span style="color: #64748b; font-size: 15px; font-weight: 600;">
+                                    {% if cupom[5] > 0 %}Mín: R$ {{ "%.2f"|format(cupom[5]) }}{% else %}Sem Mín.{% endif %}
+                                </span>
+                                
+                                <br>
+                                {% if cupom[10] > 0 %}
+                                    <span class="badge-fidelidade">SÓ NO {{ cupom[10] }}º PEDIDO</span>
+                                {% endif %}
+
+                                {% if cupom|length > 11 and cupom[11] == 'por_cliente' %}
+                                    <span class="badge-regra">👤 1 USO POR CLIENTE</span>
+                                {% else %}
+                                    <span class="badge-regra">🌍 USO GLOBAL</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong style="font-size: 20px; color: #1a202c;">{{ cupom[7] }}</strong> / <span style="color: #94a3b8; font-weight: 600;">{% if cupom[6] == 0 %}∞{% else %}{{ cupom[6] }}{% endif %}</span>
+                            </td>
+                            <td>
+                                <span class="{% if cupom[9] == 'ativo' %}status-ativo{% else %}status-inativo{% endif %}">
+                                    {{ cupom[9]|upper }}
+                                </span>
+                            </td>
+                            <td style="display: flex; gap: 8px;">
+                                <a href="/admin/cupons/toggle/{{ cupom[0] }}" style="background: #e2e8f0; padding: 12px 18px; border-radius: 8px; text-decoration: none; color: #1a202c; font-size: 15px; font-weight: 700; transition: 0.2s;">
+                                    {% if cupom[9] == 'ativo' %}Desativar{% else %}Ativar{% endif %}
+                                </a>
+                                <form action="/admin/cupons/excluir/{{ cupom[0] }}" method="POST" style="margin: 0;" onsubmit="return confirm('Apagar este cupom permanentemente?');">
+                                    <button type="submit" style="background: #fff; color: #ef4444; padding: 12px 18px; width: auto; font-size: 15px; margin: 0; border: 1px solid #fee2e2;">🗑️</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #94a3b8; padding: 60px 0; font-size: 20px; font-weight: 600;">Nenhum cupom criado ainda.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+
+</body>
+</html>

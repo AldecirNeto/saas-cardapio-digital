@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciar Opções - {{ produto_nome }}</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f8fafc; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .card { background: #f1f5f9; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 20px;}
+        input, select { width: 100%; padding: 10px; margin: 8px 0 15px 0; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        button { background: #22c55e; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;}
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;}
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e2e8f0; }
+        .btn-del { color: #ef4444; text-decoration: none; font-size: 12px; font-weight: bold;}
+        .btn-hide { color: #f59e0b; text-decoration: none; font-size: 12px; font-weight: bold;}
+        .btn-restore { color: #10b981; text-decoration: none; font-size: 12px; font-weight: bold;}
+        .riscado { text-decoration: line-through; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="{{ url_for('admin.painel_admin') }}" style="color: #3b82f6; text-decoration: none;">⬅️ Voltar</a>
+    <h2>⚙️ Configurar: {{ produto_nome }} <span style="font-size: 14px; color: #64748b;">(Categoria: {{ produto_categoria }})</span></h2>
+
+    <div class="grid">
+        <div class="card">
+            <h3>➕ Novo Item</h3>
+            <form method="POST">
+                <label>Tipo:</label>
+                <select name="tipo" required>
+                    <option value="variacao">Variação (Ex: Tamanho da Pizza)</option>
+                    <option value="complemento">Complemento (Ex: Adicional Extra)</option>
+                </select>
+
+                <label>Aplicar a:</label>
+                <select name="escopo" required>
+                    <option value="global">Toda a categoria: {{ produto_categoria }}</option>
+                    <option value="local">Apenas este item: {{ produto_nome }}</option>
+                </select>
+
+                <label>Nome (Ex: Bacon, 500ml):</label>
+                <input type="text" name="nome" required>
+
+                <label>Preço Adicional (R$):</label>
+                <input type="number" step="0.01" name="preco" value="0.00">
+
+                <button type="submit">Salvar</button>
+            </form>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3>📋 Variações (Tamanhos/Opções)</h3>
+                <table>
+                    {% for v in variacoes_locais %}
+                    <tr>
+                        <td>{{ v[3] }} <small style="color: #3b82f6;">(Local)</small></td>
+                        <td>R$ {{ "%.2f"|format(v[4]) }}</td>
+                        <td><a href="{{ url_for('admin.deletar_opcao', tipo='variacao', id_opcao=v[0], produto_id=produto_id) }}" class="btn-del">Excluir</a></td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {% for v in variacoes_herdadas %}
+                    <tr>
+                        {% if v[0] in ids_variacoes_ocultas %}
+                            <td class="riscado">{{ v[3] }} <small>(Herdado)</small></td>
+                            <td class="riscado">R$ {{ "%.2f"|format(v[4]) }}</td>
+                            <td><a href="{{ url_for('admin.restaurar_opcao', tipo='variacao', id_opcao=v[0], produto_id=produto_id) }}" class="btn-restore">Restaurar</a></td>
+                        {% else %}
+                            <td>{{ v[3] }} <small style="color: #64748b;">(Herdado)</small></td>
+                            <td>R$ {{ "%.2f"|format(v[4]) }}</td>
+                            <td><a href="{{ url_for('admin.ocultar_opcao', tipo='variacao', id_opcao=v[0], produto_id=produto_id) }}" class="btn-hide">Desativar</a></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>🥓 Complementos (Adicionais)</h3>
+                <table>
+                    {% for c in complementos_locais %}
+                    <tr>
+                        <td>{{ c[3] }} <small style="color: #3b82f6;">(Local)</small></td>
+                        <td>R$ {{ "%.2f"|format(c[4]) }}</td>
+                        <td><a href="{{ url_for('admin.deletar_opcao', tipo='complemento', id_opcao=c[0], produto_id=produto_id) }}" class="btn-del">Excluir</a></td>
+                    </tr>
+                    {% endfor %}
+
+                    {% for c in complementos_herdados %}
+                    <tr>
+                        {% if c[0] in ids_complementos_ocultos %}
+                            <td class="riscado">{{ c[3] }} <small>(Herdado)</small></td>
+                            <td class="riscado">R$ {{ "%.2f"|format(c[4]) }}</td>
+                            <td><a href="{{ url_for('admin.restaurar_opcao', tipo='complemento', id_opcao=c[0], produto_id=produto_id) }}" class="btn-restore">Restaurar</a></td>
+                        {% else %}
+                            <td>{{ c[3] }} <small style="color: #64748b;">(Herdado)</small></td>
+                            <td>R$ {{ "%.2f"|format(c[4]) }}</td>
+                            <td><a href="{{ url_for('admin.ocultar_opcao', tipo='complemento', id_opcao=c[0], produto_id=produto_id) }}" class="btn-hide">Desativar</a></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

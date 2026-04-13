@@ -1,0 +1,37 @@
+
+:root { --bg-kds: #121212; --texto-kds: #ffffff; --ticket-bg: #1e1e1e; --ticket-header: #2a2a2a; --item-bg: #252525; --borda-ticket: #333; }
+body.light { --bg-kds: #f4f7f6; --texto-kds: #2c3e50; --ticket-bg: #ffffff; --ticket-header: #ecf0f1; --item-bg: #fdfdfd; --borda-ticket: #ddd; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-kds); color: var(--texto-kds); padding: 30px; margin: 0; min-height: 100vh; box-sizing: border-box; transition: 0.3s; }
+
+.header-cozinha, .header-caixa { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--borda-ticket); padding-bottom: 15px; margin-bottom: 30px; }
+.header-cozinha h1 { color: #f39c12; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 36px; }
+.header-caixa h1 { color: #2ecc71; margin: 0; text-transform: uppercase; letter-spacing: 2px; font-size: 36px; }
+.aviso-refresh { font-size: 20px; color: #888; font-weight: bold; }
+.grid-pedidos { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px; align-items: stretch; }
+
+.ticket { background-color: var(--ticket-bg); border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; border: 1px solid var(--borda-ticket); overflow: hidden; }
+.ticket-header { background-color: var(--ticket-header); padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+.mesa-titulo { font-size: 32px; font-weight: 900; margin: 0; color: var(--texto-kds); }
+.ticket-body { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+.info-topo { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.horario-pedido { font-size: 18px; color: #f39c12; font-weight: bold; }
+
+/* COMPONENTES DO CAIXA */
+.id-pedido { font-size: 20px; font-weight: bold; background: #3498db; color: #fff; padding: 6px 14px; border-radius: 6px; height: fit-content; }
+.badge-pagamento { background-color: #2c3e50; color: #3498db; padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: bold; text-transform: uppercase; }
+.status-cozinha { text-align: center; font-weight: bold; padding: 10px; margin-bottom: 20px; border-radius: 6px; font-size: 18px;}
+.status-pronto { background: rgba(39, 174, 96, 0.1); color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.3); }
+.status-pendente { background: rgba(243, 156, 18, 0.1); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.3); }
+.total-destaque { font-size: 38px; font-weight: 900; color: #2ecc71; text-align: center; margin: auto 0; padding: 20px; background: var(--item-bg); border-radius: 8px; border: 2px dashed #2ecc71; }
+.form-pagar { margin: 0; padding: 20px; background: var(--item-bg); border-top: 1px solid var(--borda-ticket); }
+.btn-pagar { background-color: #27ae60; color: white; width: 100%; padding: 25px; border-radius: 8px; font-weight: 900; font-size: 24px; border: none; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 2px;}
+.btn-pagar:hover { background-color: #2ecc71; }
+
+/* COMPONENTES DA COZINHA (Sobrescrevem o padrão do Caixa) */
+.ticket[style*="border-top: 8px solid #e74c3c;"] .id-pedido { background: #e74c3c; } /* Adaptação inteligente para sua borda */
+.lista-itens { padding: 0; margin: 0 0 20px 0; list-style-type: none; }
+.lista-itens li { background: var(--item-bg); margin-bottom: 12px; padding: 18px; border-radius: 8px; border-left: 6px solid #3498db; font-size: 22px; font-weight: bold; line-height: 1.4; color: var(--texto-kds); }
+.alerta-obs { background-color: rgba(231, 76, 60, 0.1); color: #e74c3c; padding: 18px; border-radius: 8px; font-weight: bold; font-size: 20px; border: 2px solid rgba(231, 76, 60, 0.3); margin-top: auto; }
+.form-pronto { margin: 0; padding: 20px; background: var(--item-bg); border-top: 1px solid var(--borda-ticket); }
+.btn-pronto { background-color: #27ae60; color: white; width: 100%; padding: 25px; border-radius: 8px; font-weight: 900; font-size: 26px; border: none; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 3px;}
+.btn-pronto:hover { background-color: #2ecc71; }

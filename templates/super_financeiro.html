@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Financeiro - MRR</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/superadmin.css') }}">
+</head>
+<body>
+
+    <header class="sidebar">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <h1>🚀 SaaS Control <small style="font-size: 12px; color: #94a3b8;">v2.0</small></h1>
+            <nav style="display: flex; gap: 15px; margin-left: 20px;">
+                <a href="/superadmin" style="color: #94a3b8; text-decoration: none; font-weight: bold; font-size: 14px;">🏢 Clientes</a>
+                <a href="/superadmin/financeiro" style="color: #38bdf8; text-decoration: none; font-weight: bold; font-size: 14px;">💰 Financeiro (MRR)</a>
+            </nav>
+        </div>
+        <a href="/logout" class="btn-sair">Sair do Sistema</a>
+    </header>
+
+    <div class="container">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="grid-stats">
+            <div class="card-stat card-mrr">
+                <h3>MRR Total (Receita Mensal)</h3>
+                <div class="valor">R$ {{ "%.2f"|format(mrr_total) }}</div>
+            </div>
+            <div class="card-stat card-ativos">
+                <h3>Clientes Pagantes</h3>
+                <div class="valor">{{ qtd_ativos }}</div>
+            </div>
+            <div class="card-stat card-inad">
+                <h3>Inadimplência (Travado)</h3>
+                <div class="valor">R$ {{ "%.2f"|format(valor_inadimplente) }}</div>
+            </div>
+            <div class="card-stat card-bloq">
+                <h3>Inadimplentes (Bloq)</h3>
+                <div class="valor">{{ qtd_bloqueados }}</div>
+            </div>
+        </div>
+
+        <div class="box">
+            <h2>💸 Gestão de Assinaturas e Vencimentos</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente / Plano</th>
+                        <th>Status</th>
+                        <th>Vencimento (Dia)</th>
+                        <th>Mensalidade (R$)</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clientes %}
+                    <tr>
+                        <td>
+                            <strong>{{ c[1] }}</strong><br>
+                            <small style="color: #94a3b8; text-transform: uppercase;">PLANO: {{ c[2] }}</small>
+                        </td>
+                        <td>
+                            {% if c[3] == 'ativo' %}
+                                <span class="badge badge-ativo">Ativo</span>
+                            {% else %}
+                                <span class="badge badge-bloqueado">Bloqueado</span>
+                            {% endif %}
+                        </td>
+                        <form action="/superadmin/editar_financeiro/{{ c[0] }}" method="POST">
+                            <td>
+                                Dia <input type="number" name="dia_vencimento" class="input-fin" value="{{ c[5] if c[5] else 5 }}" min="1" max="31" style="width: 60px;">
+                            </td>
+                            <td>
+                                R$ <input type="number" name="valor_plano" class="input-fin" value="{{ c[4] if c[4] else 0.0 }}" step="0.01" style="width: 100px;">
+                            </td>
+                            <td>
+                                <button type="submit" class="btn-salvar">💾 Salvar</button>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cardápio Digital</title>
+    
+   <link rel="stylesheet" href="{{ url_for('static', filename='css/cliente.css') }}?v=2.0">
+    
+    <style>
+        :root {
+            --cor-primaria: {{ cor_tema or '#e67e22' }};
+            --cor-secundaria: {{ cor_tema }}15;
+            --cor-sucesso: #4CAF50;
+            --cor-fundo: {{ cor_fundo or '#f8fafc' }};
+            --cor-card: {{ cor_card or '#ffffff' }};         
+            --cor-texto-principal: {{ cor_texto or '#1e293b' }}; 
+            --cor-texto-secundario: #64748b;
+            --cor-texto-botao: {{ cor_texto_botao or '#ffffff' }};
+        }
+    </style>
+</head>
+
+<body>
+
+    {% if fundo_img %}
+    <script>
+        document.body.style.backgroundImage = "url('{{ url_for('static', filename=fundo_img) }}')";
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundAttachment = "fixed";
+        document.body.style.backgroundPosition = "center";
+    </script>
+    {% endif %}
+
+    <div id="toast-aviso" class="toast">✔️ Adicionado ao carrinho!</div>
+
+    <div class="header">
+        <button class="btn-menu" onclick="abrirMenu()">☰</button>
+        
+        {% if logo %}
+            <img src="{{ url_for('static', filename=logo) }}" alt="Logo {{ restaurante_nome }}" style="max-height: 55px; object-fit: contain;">
+        {% else %}
+            <h1>{{ restaurante_nome }}</h1>
+        {% endif %}
+    </div>
+
+    <input type="hidden" id="sys_restaurante_id" value="{{ restaurante_id }}">
+
+    <div class="sidebar-overlay" id="overlay-menu" onclick="fecharMenu()"></div>
+    <nav class="sidebar" id="menu-lateral">
+        <div class="sidebar-header">
+            <h2>Categorias</h2>
+            <button class="fechar-sidebar" onclick="fecharMenu()">×</button>
+        </div>
+        <div class="menu-lateral-lista">
+            {% for categoria, itens in cardapio | groupby(3) %}
+                <a href="#cat-{{ loop.index }}" class="link-categoria" onclick="fecharMenu()">{{ categoria }}</a>
+            {% endfor %}
+        </div>
+    </nav>
+    
+    <div class="conteudo-cardapio">
+        {% for categoria, itens in cardapio | groupby(3) %}
+            <section id="cat-{{ loop.index }}" class="sessao-categoria">
+                <h3 class="titulo-categoria">{{ categoria }}</h3>
+                
+                <div class="grid-produtos">
+                    {% for item in itens %}
+                        <div class="card-produto">
+                            {% set imagem_url = item[4] %}
+                            {% if not imagem_url or imagem_url == "" %} 
+                                <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" alt="Sem Foto" class="img-produto">
+                            {% elif 'http' in imagem_url %} 
+                                <img src="{{ imagem_url }}" alt="{{ item[1] }}" class="img-produto">
+                            {% else %} 
+                                <img src="{{ url_for('static', filename=imagem_url) }}" alt="{{ item[1] }}" class="img-produto">
+                            {% endif %}
+                            
+                            <div class="card-info">
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                                    <strong>{{ item[1] }}</strong>
+                                    
+                                    {% if item[7] == 1 %}
+                                        <span style="background: #fef08a; color: #b45309; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; margin-left: 8px; flex-shrink: 0;">PROMO</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if item|length > 8 and item[8] %}
+                                    <div onclick="abrirDetalhesProduto(this)" data-titulo="{{ item[1] }}" data-descricao="{{ item[8] }}" style="cursor: pointer;">
+                                        <p style="margin: 0; font-size: 13px; color: var(--cor-texto-secundario); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                                            {{ item[8] }}
+                                        </p>
+                                        <span style="font-size: 12px; color: var(--cor-primaria); font-weight: 700; margin-bottom: 10px; display: block; margin-top: 4px;">Ler mais</span>
+                                    </div>
+                                {% endif %}
+
+                                <div style="flex-grow: 1;"></div>
+                                
+                                <div class="preco">
+                                    {% if item[7] == 1 %}
+                                        <span style="font-size: 13px; color: var(--cor-texto-secundario); text-decoration: line-through; margin-right: 8px; font-weight: normal;">R$ {{ "%.2f"|format(item[2]) }}</span>
+                                        <span style="color: #ef4444;">R$ {{ "%.2f"|format(item[6]) }}</span>
+                                    {% else %}
+                                        R$ {{ "%.2f"|format(item[2]) }}
+                                    {% endif %}
+                                </div>
+                                
+                                <div style="margin-top: 10px;">
+                                    <button type="button" class="btn-add-form" onclick="abrirModalProduto({{ item[0] }}, '{{ url_for('cliente.adicionar_ao_carrinho', id_produto=0) }}')" style="width: 100%; border-radius: 8px;">
+                                        Adicionar ➕
+                                    </button>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+
+    <div class="sacola-flutuante" onclick="abrirCarrinho()">
+        <span>🛒 Ver Carrinho</span>
+        <span class="badge-itens"><span id="qtd-carrinho">{{ carrinho|length }}</span> itens</span>
+    </div>
+
+    <div class="overlay" id="overlay-detalhes" onclick="fecharDetalhesProduto()"></div>
+    <div class="modal-detalhes" id="modal-detalhes">
+        <button class="fechar-detalhes" onclick="fecharDetalhesProduto()">✕</button>
+        <h3 id="detalhe-titulo"></h3>
+        <p id="detalhe-descricao"></p>
+    </div>
+
+    <div class="overlay" id="overlay-carrinho" onclick="fecharCarrinho()"></div>
+    
+    <div class="modal-carrinho" id="modal-carrinho">
+        <button class="fechar-modal" onclick="fecharCarrinho()">×</button>
+        <h2 style="margin-top: 0; margin-bottom: 25px; color: var(--cor-texto-principal); font-weight: 800;">🛒 Seu Carrinho</h2>
+        
+        <div id="conteudo-carrinho">
+            {% if carrinho|length > 0 %}
+                
+                {% set subtotal_carrinho = carrinho | sum(attribute='subtotal') %}
+
+                <ul class="lista-carrinho">
+                    {% for item in carrinho %}
+                        <li>
+                            <div style="flex: 1; padding-right: 15px;">
+                                <strong style="color: var(--cor-texto-principal); font-size: 15px;">{{ item.quantidade }}x {{ item.nome }}</strong>
+                                {% if item.observacao %}<div style="font-size: 13px; color: var(--cor-texto-secundario); margin-top: 4px; background: rgba(0,0,0,0.03); padding: 5px 8px; border-radius: 6px;">Obs: {{ item.observacao }}</div>{% endif %}
+                                <div style="color: var(--cor-primaria); font-weight: 800; margin-top: 6px;">R$ {{ "%.2f"|format(item.subtotal) }}</div>
+                            </div>
+                            <a href="{{ url_for('cliente.remover_do_carrinho', indice=loop.index0) }}" style="color: #ef4444; text-decoration: none; font-size: 20px; padding: 10px; background: #fef2f2; border-radius: 10px; transition: 0.2s;">🗑️</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+                
+                <div id="banner-recompensa" style="display: none; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);">
+                    <span style="font-size: 28px; display: block; margin-bottom: 8px;">🎁</span>
+                    <p id="texto-recompensa" style="margin: 0 0 12px 0; font-size: 15px; line-height: 1.5; font-weight: 500;"></p>
+                    <div style="background: rgba(255,255,255,0.25); padding: 10px; border-radius: 8px; display: inline-block;">
+                        <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Código:</span>
+                        <strong id="codigo-recompensa" style="font-size: 20px; letter-spacing: 2px;"></strong>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px dashed #cbd5e1;">
+                    <label style="font-size: 15px; font-weight: 700; margin-bottom: 12px; display: block; color: var(--cor-texto-principal);">🎫 Tem um cupom de desconto?</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="inputCupom" placeholder="Ex: BEMVINDO10" style="margin: 0; flex: 1; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
+                        <button type="button" id="btnCupom" onclick="aplicarCupom()" style="background: var(--cor-texto-principal); color: white; border: none; border-radius: 8px; padding: 0 20px; font-weight: 800; cursor: pointer; transition: 0.2s;">Aplicar</button>
+                    </div>
+                    <div id="msgCupom" style="font-size: 14px; margin-top: 10px; font-weight: 700; display: none;"></div>
+                </div>
+
+                <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: var(--cor-texto-secundario); font-weight: 600;">
+                        <span>Subtotal:</span>
+                        <span id="txtSubtotal" data-valor="{{ subtotal_carrinho }}">R$ {{ "%.2f"|format(subtotal_carrinho) }}</span>
+                    </div>
+                    <div id="linhaDesconto" style="display: none; justify-content: space-between; margin-bottom: 10px; color: #ef4444; font-weight: 800;">
+                        <span>Desconto (Cupom):</span>
+                        <span id="txtDesconto">- R$ 0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 900; color: var(--cor-texto-principal); border-top: 2px solid #e2e8f0; padding-top: 15px; margin-top: 5px;">
+                        <span>Total a Pagar:</span>
+                        <span id="txtTotal">R$ {{ "%.2f"|format(subtotal_carrinho) }}</span>
+                    </div>
+                </div>
+
+                <form id="form-finalizar-pedido" action="{{ url_for('cliente.finalizar_pedido') }}" method="POST">
+                    <input type="hidden" name="restaurante_id" value="{{ restaurante_id }}">
+                    <input type="hidden" name="url_voltar" value="{{request.path}}">
+                    <input type="hidden" name="cupom_codigo" id="hiddenCupom">
+                    <input type="hidden" name="device_id" id="hiddenDeviceId">
+                    
+                    <label style="color: var(--cor-texto-principal); font-weight: 700; margin-bottom: 6px;">Seu Nome:</label>
+                    <input type="text" name="nome_cliente" id="inputNomeCliente" placeholder="Como quer ser chamado?" required>
+
+                    <label style="color: var(--cor-texto-principal); font-weight: 700; margin-bottom: 6px; margin-top: 10px;">Número do WhatsApp (Com DDD):</label>
+                    <input type="text" name="telefone_cliente" id="inputTelCliente" placeholder="Apenas números" required>
+                    
+                    <hr style="border: 0; border-top: 2px dashed #e2e8f0; margin: 25px 0;">
+
+                    <label style="color: var(--cor-texto-principal); font-weight: 700; margin-bottom: 6px;">Número da Mesa:</label>
+                    <input type="text" name="numero_mesa" placeholder="Ex: Mesa 05">
+
+                    <label style="color: var(--cor-texto-principal); font-weight: 700; margin-bottom: 6px; margin-top: 10px;">Observações Gerais do Pedido:</label>
+                    <textarea name="observacao" placeholder="Ex: Sem cebola em todos os lanches, por favor." rows="2"></textarea>
+                    
+                    <label style="color: var(--cor-texto-principal); font-weight: 800; margin-top: 15px; display: block; font-size: 16px;">Como você prefere pagar?</label>
+                    <div style="display: flex; gap: 15px; margin-top: 12px;">
+                        <label style="background: white; color: var(--cor-texto-principal); padding: 18px 10px; border-radius: 12px; flex: 1; text-align: center; border: 2px solid #cbd5e1; cursor: pointer; font-weight: 800; font-size: 15px; transition: 0.2s;">
+                            <input type="radio" name="forma_pagamento" value="PIX" checked style="margin-right: 8px; transform: scale(1.2);"> PIX Rápido
+                        </label>
+                        <label style="background: white; color: var(--cor-texto-principal); padding: 18px 10px; border-radius: 12px; flex: 1; text-align: center; border: 2px solid #cbd5e1; cursor: pointer; font-weight: 800; font-size: 15px; transition: 0.2s;">
+                            <input type="radio" name="forma_pagamento" value="Maquininha" style="margin-right: 8px; transform: scale(1.2);"> Maquininha
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-verde" style="margin-top: 25px; width: 100%;">🚀 Enviar Pedido para a Cozinha</button>
+                </form>
+            {% else %}
+                <div style="text-align: center; padding: 50px 20px;">
+                    <span style="font-size: 50px; display: block; margin-bottom: 15px; opacity: 0.5;">🍔</span>
+                    <p style="color: var(--cor-texto-secundario); font-size: 16px; font-weight: 600;">Seu carrinho está vazio.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="modalProduto" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end;">
+        
+        <form id="formModalAdicionar" method="POST" style="background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; box-sizing: border-box;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="modalNome" style="margin: 0; color: #1e293b;">Carregando...</h2>
+                <button type="button" onclick="fecharModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+            </div>
+            
+            <p id="modalDescricao" style="color: #64748b; font-size: 14px; margin-top: 5px;"></p>
+            <h3 style="color: #22c55e; margin-top: 0;">R$ <span id="modalPrecoBase">0.00</span></h3>
+
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+
+            <div id="containerVariacoes"></div>
+            <div id="containerComplementos"></div>
+
+            <label style="font-weight: 700; margin-top: 15px; display: block; color: var(--cor-texto-principal);">Alguma observação?</label>
+            <input type="text" name="observacao" class="input-obs" placeholder="Ex: Tirar cebola" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 5px; box-sizing: border-box;">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-bottom: 20px;">
+                <div style="font-weight: 700; color: var(--cor-texto-principal);">Quantidade:</div>
+                <div class="qtd-control" style="display: flex; align-items: center; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden;">
+                    <button type="button" style="padding: 10px 15px; border: none; background: #f1f5f9; cursor: pointer; font-size: 16px;" onclick="if(this.nextElementSibling.value > 1) { this.nextElementSibling.value--; atualizarTotal(); }">-</button>
+                    <input type="number" name="quantidade" id="modalQuantidade" value="1" min="1" readonly style="width: 40px; text-align: center; border: none; outline: none; font-weight: bold; background: white;">
+                    <button type="button" style="padding: 10px 15px; border: none; background: #f1f5f9; cursor: pointer; font-size: 16px;" onclick="this.previousElementSibling.value++; atualizarTotal();">+</button>
+                </div>
+            </div>
+
+            <div style="position: sticky; bottom: 0; background: white; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                <button type="button" onclick="adicionarPeloModal()" style="width: 100%; background: #ef4444; color: white; border: none; padding: 15px; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer;">
+                    Adicionar ao Carrinho - R$ <span id="modalTotal">0.00</span>
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <script>
+        let precoProdutoAtual = 0;
+
+        async function abrirModalProduto(produtoId, urlBaseAddCart) {
+            document.getElementById('modalProduto').style.display = 'flex';
+            document.getElementById('modalNome').innerText = "Buscando opções...";
+            
+            let form = document.getElementById('formModalAdicionar');
+            form.action = urlBaseAddCart.replace('/0', '/' + produtoId);
+            
+            document.getElementById('modalQuantidade').value = 1;
+
+            try {
+                let response = await fetch('/api/produto/' + produtoId);
+                let dados = await response.json();
+
+                precoProdutoAtual = dados.preco_base;
+                
+                document.getElementById('modalNome').innerText = dados.nome;
+                document.getElementById('modalDescricao').innerText = dados.descricao || "";
+                document.getElementById('modalPrecoBase').innerText = dados.preco_base.toFixed(2);
+                
+                let htmlVariacoes = '';
+                if (dados.variacoes.length > 0) {
+                    htmlVariacoes += '<h4 style="margin-bottom: 8px; color: #1e293b;">Tamanho / Opção Exclusiva</h4>';
+                    
+                    htmlVariacoes += `
+                        <label style="display: flex; justify-content: space-between; padding: 12px; border: 2px solid #3b82f6; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: #eff6ff;">
+                            <div>
+                                <input type="radio" name="variacao_id" value="base" data-preco="0" onchange="atualizarTotal()" checked> <span style="font-weight: 800; color: #1e293b;">Tamanho Original</span>
+                            </div>
+                            <span style="color: #64748b; font-weight: bold; font-size: 14px;">Incluso</span>
+                        </label>
+                    `;
+
+                    dados.variacoes.forEach((v) => {
+                        htmlVariacoes += `
+                            <label style="display: flex; justify-content: space-between; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: #f8fafc;">
+                                <div>
+                                    <input type="radio" name="variacao_id" value="${v.id}" data-preco="${v.preco}" onchange="atualizarTotal()"> <span style="font-weight: 500;">${v.nome}</span>
+                                </div>
+                                <span style="color: #22c55e; font-weight: bold;">+ R$ ${v.preco.toFixed(2)}</span>
+                            </label>
+                        `;
+                    });
+                }
+                document.getElementById('containerVariacoes').innerHTML = htmlVariacoes;
+
+                let htmlComplementos = '';
+                if (dados.complementos.length > 0) {
+                    htmlComplementos += '<h4 style="margin-bottom: 8px; color: #1e293b; margin-top: 15px;">Adicionais</h4>';
+                    dados.complementos.forEach(c => {
+                        htmlComplementos += `
+                            <label style="display: flex; justify-content: space-between; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; cursor: pointer; background: #f8fafc;">
+                                <div>
+                                    <input type="checkbox" name="complemento_id" value="${c.id}" data-preco="${c.preco}" class="complemento-check" onchange="atualizarTotal()"> <span style="font-weight: 500;">${c.nome}</span>
+                                </div>
+                                <span style="color: #22c55e; font-weight: bold;">+ R$ ${c.preco.toFixed(2)}</span>
+                            </label>
+                        `;
+                    });
+                }
+                document.getElementById('containerComplementos').innerHTML = htmlComplementos;
+
+                atualizarTotal(); 
+
+            } catch (error) {
+                alert("Erro ao carregar as opções. Tente novamente.");
+                fecharModal();
+            }
+        }
+
+        function atualizarTotal() {
+            let total = precoProdutoAtual;
+            let qtd = parseInt(document.getElementById('modalQuantidade').value) || 1;
+
+            let variacaoSelecionada = document.querySelector('input[name="variacao_id"]:checked');
+            if (variacaoSelecionada) {
+                total += parseFloat(variacaoSelecionada.dataset.preco);
+            }
+
+            let complementos = document.querySelectorAll('.complemento-check:checked');
+            complementos.forEach(c => {
+                total += parseFloat(c.dataset.preco);
+            });
+
+            document.getElementById('modalTotal').innerText = (total * qtd).toFixed(2);
+        }
+
+        function fecharModal() {
+            document.getElementById('modalProduto').style.display = 'none';
+        }
+
+        // AQUI ESTÁ A FUNÇÃO BLINDADA FINAL
+        async function adicionarPeloModal() {
+            let form = document.getElementById('formModalAdicionar');
+            let formData = new FormData(form);
+            let btn = form.querySelector('button');
+            
+            let textoOriginal = btn.innerHTML;
+            btn.innerHTML = "Adicionando... ⏳";
+            btn.disabled = true;
+
+            try {
+                let response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                let resultado = await response.json();
+                
+                if (resultado.sucesso) {
+                    document.getElementById('modalProduto').style.display = 'none';
+                    window.location.reload(); 
+                } else {
+                    alert("Erro do Servidor: " + resultado.erro);
+                    btn.innerHTML = textoOriginal;
+                    btn.disabled = false;
+                }
+            } catch (erro) {
+                console.error("Erro no JS:", erro);
+                alert("Erro de conexão. Tente novamente.");
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+    </script>
+
+    <script src="{{ url_for('static', filename='js/carrinho.js') }}" defer></script>
+</body>
+</html>
