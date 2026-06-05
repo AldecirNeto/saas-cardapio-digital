@@ -1,6 +1,6 @@
-/* =========================================================
-   ESTILOS DO CLIENTE PREMIUM (Cardápio e Pagamento)
-========================================================= */
+/* 
+   ESTILOS DO CLIENTE  (Cardápio e Pagamento)
+*/
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;800&display=swap');
 
 html { scroll-behavior: smooth; }
@@ -15,7 +15,7 @@ body {
     color: var(--cor-texto-principal);
 }
 
-/* --- CABEÇALHO FIXO PREMIUM --- */
+/* --- CABEÇALHO FIXO  --- */
 .header { 
     display: flex; align-items: center; justify-content: center; 
     position: sticky; top: 10px; z-index: 800; margin-bottom: 25px; 
