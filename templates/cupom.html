@@ -65,7 +65,6 @@
                             <label>Qtd. Total de Usos <small>(0 = SEM LIMITE)</small></label>
                             <input type="number" name="limite_uso" value="0" required>
                         </div>
-                        
                     </div>
 
                     <label style="color: #1e40af;">🎯 Meta de Fidelidade <small>(Exclusivo pro Pedido Nº)</small></label>
@@ -90,41 +89,48 @@
                     <tbody>
                         {% for cupom in cupons %}
                         <tr>
-                            <td><strong style="color: #e74c3c; font-size: 22px; font-weight: 800;">{{ cupom[2] }}</strong></td>
+                            {# cupom.codigo em vez de cupom[2] #}
+                            <td><strong style="color: #e74c3c; font-size: 22px; font-weight: 800;">{{ cupom.codigo }}</strong></td>
                             <td>
                                 <strong style="font-size: 20px; color: #1a202c; font-weight: 700;">
-                                    {% if cupom[3] == 'porcentagem' %}{{ cupom[4]|int }}% OFF
-                                    {% else %}R$ {{ "%.2f"|format(cupom[4]) }} OFF{% endif %}
+                                    {# cupom.tipo e cupom.valor em vez de cupom[3] e [4] #}
+                                    {% if cupom.tipo == 'porcentagem' %}{{ cupom.valor|int }}% OFF
+                                    {% else %}R$ {{ "%.2f"|format(cupom.valor) }} OFF{% endif %}
                                 </strong>
                                 <br>
                                 <span style="color: #64748b; font-size: 15px; font-weight: 600;">
-                                    {% if cupom[5] > 0 %}Mín: R$ {{ "%.2f"|format(cupom[5]) }}{% else %}Sem Mín.{% endif %}
+                                    {# cupom.valor_minimo em vez de cupom[5] #}
+                                    {% if cupom.valor_minimo > 0 %}Mín: R$ {{ "%.2f"|format(cupom.valor_minimo) }}{% else %}Sem Mín.{% endif %}
                                 </span>
                                 
                                 <br>
-                                {% if cupom[10] > 0 %}
-                                    <span class="badge-fidelidade">SÓ NO {{ cupom[10] }}º PEDIDO</span>
+                                {# cupom.meta_pedidos em vez de cupom[10] #}
+                                {% if cupom.meta_pedidos > 0 %}
+                                    <span class="badge-fidelidade">SÓ NO {{ cupom.meta_pedidos }}º PEDIDO</span>
                                 {% endif %}
 
-                                {% if cupom|length > 11 and cupom[11] == 'por_cliente' %}
+                                {# cupom.tipo_limite em vez de cupom[11] #}
+                                {% if cupom.tipo_limite == 'por_cliente' %}
                                     <span class="badge-regra">👤 1 USO POR CLIENTE</span>
                                 {% else %}
                                     <span class="badge-regra">🌍 USO GLOBAL</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <strong style="font-size: 20px; color: #1a202c;">{{ cupom[7] }}</strong> / <span style="color: #94a3b8; font-weight: 600;">{% if cupom[6] == 0 %}∞{% else %}{{ cupom[6] }}{% endif %}</span>
+                                {# cupom.qtd_usos e cupom.limite_uso em vez de cupom[7] e [6] #}
+                                <strong style="font-size: 20px; color: #1a202c;">{{ cupom.qtd_usos }}</strong> / <span style="color: #94a3b8; font-weight: 600;">{% if cupom.limite_uso == 0 %}∞{% else %}{{ cupom.limite_uso }}{% endif %}</span>
                             </td>
                             <td>
-                                <span class="{% if cupom[9] == 'ativo' %}status-ativo{% else %}status-inativo{% endif %}">
-                                    {{ cupom[9]|upper }}
+                                {# cupom.status em vez de cupom[9] #}
+                                <span class="{% if cupom.status == 'ativo' %}status-ativo{% else %}status-inativo{% endif %}">
+                                    {{ cupom.status|upper }}
                                 </span>
                             </td>
                             <td style="display: flex; gap: 8px;">
-                                <a href="/admin/cupons/toggle/{{ cupom[0] }}" style="background: #e2e8f0; padding: 12px 18px; border-radius: 8px; text-decoration: none; color: #1a202c; font-size: 15px; font-weight: 700; transition: 0.2s;">
-                                    {% if cupom[9] == 'ativo' %}Desativar{% else %}Ativar{% endif %}
+                                <a href="/admin/cupons/toggle/{{ cupom.id }}" style="background: #e2e8f0; padding: 12px 18px; border-radius: 8px; text-decoration: none; color: #1a202c; font-size: 15px; font-weight: 700; transition: 0.2s;">
+                                    {% if cupom.status == 'ativo' %}Desativar{% else %}Ativar{% endif %}
                                 </a>
-                                <form action="/admin/cupons/excluir/{{ cupom[0] }}" method="POST" style="margin: 0;" onsubmit="return confirm('Apagar este cupom permanentemente?');">
+                                <form action="/admin/cupons/excluir/{{ cupom.id }}" method="POST" style="margin: 0;" onsubmit="return confirm('Apagar este cupom permanentemente?');">
                                     <button type="submit" style="background: #fff; color: #ef4444; padding: 12px 18px; width: auto; font-size: 15px; margin: 0; border: 1px solid #fee2e2;">🗑️</button>
                                 </form>
                             </td>

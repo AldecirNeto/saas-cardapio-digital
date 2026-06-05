@@ -19,35 +19,35 @@
                 
                 <div class="ticket-header">
                     <div>
-                        <h2 class="mesa-titulo">Mesa {{ pedido[1] }}</h2>
-                        {% if pedido[8] %}
+                        <h2 class="mesa-titulo">Mesa {{ pedido.mesa }}</h2>
+                        {% if pedido.nome_cliente %}
                             <div style="color: #94a3b8; font-size: 14px; margin-top: 5px; font-weight: normal;">
-                                👤 {{ pedido[8] }} <br>
-                                📱 {{ pedido[9] }}
+                                👤 {{ pedido.nome_cliente }} <br>
+                                📱 {{ pedido.telefone_cliente }}
                             </div>
                         {% endif %}
                     </div>
-                    <span class="id-pedido" style="height: fit-content;">#{{ pedido[0] }}</span>
+                    <span class="id-pedido" style="height: fit-content;">#{{ pedido.id }}</span>
                 </div>
                 
                 <div class="ticket-body">
                     <div class="info-topo">
-                        <span class="horario-pedido">🕒 {{ pedido[5] }}</span>
-                        <span class="badge-pagamento">💳 {{ pedido[4].split(' - ')[-1] if ' - ' in pedido[4] else pedido[4] }}</span>
+                        <span class="horario-pedido">🕒 {{ pedido.data_hora }}</span>
+                        <span class="badge-pagamento">💳 {{ pedido.status.split(' - ')[-1] if pedido.status and ' - ' in pedido.status else pedido.status }}</span>
                     </div>
 
-                    {% if 'pronto' in pedido[4] %}
+                    {% if 'pronto' in pedido.status %}
                         <div class="status-cozinha status-pronto">🧑‍🍳 Comida Pronta!</div>
                     {% else %}
                         <div class="status-cozinha status-pendente">🔥 Na Cozinha...</div>
                     {% endif %}
 
                     <div class="total-destaque">
-                        R$ {{ "%.2f"|format(pedido[3]) }}
+                        R$ {{ "%.2f"|format(pedido.total) }}
                     </div>
                 </div>
                 
-                <form action="/pagar/{{ pedido[0] }}" method="POST" class="form-pagar">
+                <form action="/pagar/{{ pedido.id }}" method="POST" class="form-pagar">
                     <input type="hidden" name="restaurante_id" value="{{ restaurante_id }}">
                     <button type="submit" class="btn-pagar">💲 Recebido</button>
                 </form>
@@ -62,14 +62,12 @@
     </div>
 
     <script>
-        // O mesmo truque do KDS para não dar erro no VS Code
         const totalPedidosAtual = Number("{{ pedidos|length }}");
         const totalAnterior = sessionStorage.getItem('qtd_pedidos_caixa');
 
-        // Som de Moeda/Caixa Registradora (Diferente da Cozinha)
         if (totalAnterior !== null && totalPedidosAtual > Number(totalAnterior)) {
             const somCaixa = new Audio('/static/audio/bip-geral.mp3');
-            somCaixa.play().catch(e => console.log("Áudio bloqueado pelo navegador. Clique na tela para liberar.", e));
+            somCaixa.play().catch(e => console.log("Áudio bloqueado pelo navegador.", e));
         }
         
         sessionStorage.setItem('qtd_pedidos_caixa', totalPedidosAtual);

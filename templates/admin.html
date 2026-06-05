@@ -73,8 +73,8 @@
                         <ul class="lista-categorias">
                             {% for cat in categorias_atuais %}
                             <li>
-                                <strong>{{ cat[1] }}</strong>
-                                <form action="/admin/categorias/excluir/{{ cat[0] }}" method="POST" style="margin: 0;" onsubmit="return confirm('Apagar esta categoria?');">
+                                <strong>{{ cat.nome }}</strong>
+                                <form action="/admin/categorias/excluir/{{ cat.id }}" method="POST" style="margin: 0;" onsubmit="return confirm('Apagar esta categoria?');">
                                     <button type="submit" class="btn-excluir-cat">🗑️ Apagar</button>
                                 </form>
                             </li>
@@ -98,14 +98,14 @@
                     <label>Categoria:</label>
                     <select name="categoria" required>
                         {% for cat in categorias_atuais %}
-                            <option value="{{ cat[1] }}">{{ cat[1] }}</option>
+                            <option value="{{ cat.nome }}">{{ cat.nome }}</option>
                         {% else %}
                             <option value="Geral">Geral</option>
                         {% endfor %}
                     </select>
                     
                     <label>Descrição / Ingredientes <small style="color: #7f8c8d; font-weight: normal;">(Opcional)</small>:</label>
-                    <textarea name="descricao" placeholder="Ex: Pão brioche artesanal, blend 160g, duplo cheddar e bacon crocante." rows="2" style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 15px; transition: 0.3s; resize: vertical;"></textarea>
+                    <textarea name="descricao" placeholder="Ex: Pão brioche artesanal..." rows="2" style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 15px; transition: 0.3s; resize: vertical;"></textarea>
                     
                     <label>Foto do Produto:</label>
                     <input type="file" name="imagem" accept="image/*" style="border: none; padding: 0;">
@@ -117,19 +117,19 @@
 
                 <h2>🏆 Top 10 Mais Vendidos</h2>
                 <ul class="ranking-list">
-                    {% for item, quantidade in top_itens %}
+                    {% for item_venda in top_itens %}
                         <li>
                             <div>
-                                {% if loop.index == 1 %}<span class="medalha; font-size: 18px;">🥇</span>
-                                {% elif loop.index == 2 %}<span class="medalha; font-size: 18px;">🥈</span>
-                                {% elif loop.index == 3 %}<span class="medalha; font-size: 18px;">🥉</span>
-                                {% else %}<span class="medalha; font-size: 18px;">🏅</span>{% endif %}
-                                <strong style="color: #2c3e50; font-size: 18px;">{{ item }}</strong>
+                                {% if loop.index == 1 %}<span class="medalha">🥇</span>
+                                {% elif loop.index == 2 %}<span class="medalha">🥈</span>
+                                {% elif loop.index == 3 %}<span class="medalha">🥉</span>
+                                {% else %}<span class="medalha">🏅</span>{% endif %}
+                                <strong style="color: #2c3e50; font-size: 18px;">{{ item_venda[0] }}</strong>
                             </div>
-                            <strong class="qtd-badge; font-size: 18px;">{{ quantidade }} un</strong>
+                            <strong class="qtd-badge">{{ item_venda[1] }} un</strong>
                         </li>
                     {% else %}
-                        <p style="color: #95a5a6; font-size: 15 px; text-align: center; padding: 20px 0;">Nenhuma venda registrada ainda.</p>
+                        <p style="color: #95a5a6; font-size: 15px; text-align: center; padding: 20px 0;">Nenhuma venda registrada ainda.</p>
                     {% endfor %}
                 </ul>
             </div>
@@ -149,33 +149,33 @@
                     <tbody>
                         {% for item in cardapio %}
                         <tr>
-                            <td><strong style="color: #000000;">#{{ item[0] }} </strong></td>
+                            <td><strong style="color: #000000;">#{{ item.id }} </strong></td>
                             <td style="font-weight: 600; font-size: 18px;">
-                                {{ item[1] }}
-                                {% if item[7] == 1 %} 
+                                {{ item.nome }}
+                                {% if item.em_promo %} 
                                     <span class="badge-promo">🤑 PROMO</span>
                                 {% endif %}
                             </td>
-                            <td><strong class="badge-categoria; font-size: 18px;">{{ item[3] }}</strong></td>
+                            <td><strong class="badge-categoria">{{ item.categoria }}</strong></td>
                             <td style="color: #27ae60; font-weight: bold; font-size: 18px;">
-                                {% if item[7] == 1 %}
-                                    <span style="text-decoration: line-through; color: #95a5a6; font-size: 14px;">R$ {{ "%.2f"|format(item[2]) }}</span><br>
-                                    <span style="color: #e74c3c;">R$ {{ "%.2f"|format(item[6]) }}</span>
+                                {% if item.em_promo %}
+                                    <span style="text-decoration: line-through; color: #95a5a6; font-size: 14px;">R$ {{ "%.2f"|format(item.preco) }}</span><br>
+                                    <span style="color: #e74c3c;">R$ {{ "%.2f"|format(item.preco_promo) }}</span>
                                 {% else %}
-                                    R$ {{ "%.2f"|format(item[2]) }}
+                                    R$ {{ "%.2f"|format(item.preco) }}
                                 {% endif %}
                             </td>
                             <td class="acoes-flex">
-                                <a href="/admin/editar/{{ item[0] }}" style="text-decoration: none;">
+                                <a href="/admin/editar/{{ item.id }}" style="text-decoration: none;">
                                     <button type="button" class="btn-pequeno btn-editar">✏️ Editar</button>                      
                                 </a>
                                 
-                                <form action="/admin/excluir/{{ item[0] }}" method="POST" style="margin: 0;" onsubmit="return confirm('Tem certeza que deseja apagar o lanche: {{ item[1] }}?');">
+                                <form action="/admin/excluir/{{ item.id }}" method="POST" style="margin: 0;" onsubmit="return confirm('Tem certeza que deseja apagar o lanche: {{ item.nome }}?');">
                                     <button type="submit" class="btn-pequeno btn-excluir">🗑️ Excluir</button>
                                 </form>
-                                <a href="{{ url_for('admin.gerenciar_opcoes', produto_id=item[0]) }}">⚙️ Extras</a>
+                                <a href="{{ url_for('admin.gerenciar_opcoes', produto_id=item.id) }}">⚙️ Extras</a>
 
-                                <button type="button" class="btn-pequeno" style="background: #ffeaa7; color: #d35400;" onclick="abrirPromo('{{ item[0] }}', '{{ item[1] }}', '{{ item[2] }}', '{{ item[6] }}', '{{ item[7] }}')">
+                                <button type="button" class="btn-pequeno" style="background: #ffeaa7; color: #d35400;" onclick="abrirPromo('{{ item.id }}', '{{ item.nome }}', '{{ item.preco }}', '{{ item.preco_promo }}', '{{ item.em_promo }}')">
                                     🤑 Promo
                                 </button>
                             </td>
@@ -249,24 +249,24 @@
                 <tbody>
                     {% for pedido in historico %}
                     <tr>
-                        <td><strong style="color: #0b0c0c;">#{{ pedido[0] }} </strong></td>
-                        <td>{{ pedido[5] }}</td> 
+                        <td><strong style="color: #0b0c0c;">#{{ pedido.id }} </strong></td>
+                        <td>{{ pedido.data_hora }}</td> 
                         
                         <td>
-                            <strong style="font-weight: bold;">{{ pedido[1] }}</strong>
-                            {% if pedido[7] %}
-                                <br><small style="color: #555;">👤 {{ pedido[7] }}</small>
-                                <br><small style="color: #555;">📱 {{ pedido[8] }}</small>
+                            <strong style="font-weight: bold;">{{ pedido.mesa }}</strong>
+                            {% if pedido.nome_cliente %}
+                                <br><small style="color: #555;">👤 {{ pedido.nome_cliente }}</small>
+                                <br><small style="color: #555;">📱 {{ pedido.telefone_cliente }}</small>
                             {% endif %}
                         </td> 
                         
-                        <td style="color: #555;">{{ pedido[2] }}</td> 
-                        <td style="font-weight: bold;">R$ {{ "%.2f"|format(pedido[3]) }}</td> 
+                        <td style="color: #555;">{{ pedido.itens }}</td> 
+                        <td style="font-weight: bold;">R$ {{ "%.2f"|format(pedido.total) }}</td> 
                         <td>
-                            {% if 'finalizado' in pedido[4] %}
-                                <span style="background: #e8f8f5; color: #27ae60; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 13px;">✔️ {{ pedido[4]|upper }}</span>
+                            {% if 'finalizado' in pedido.status %}
+                                <span style="background: #e8f8f5; color: #27ae60; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 13px;">✔️ {{ pedido.status|upper }}</span>
                             {% else %}
-                                <span style="background: #fef9e7; color: #f39c12; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 13px;">⏳ {{ pedido[4]|upper }}</span>
+                                <span style="background: #fef9e7; color: #f39c12; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 13px;">⏳ {{ pedido.status|upper }}</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -294,7 +294,7 @@
                 </div>
             </div>
         </div>
-        </div>
+    </div>
 
     <div id="modalPromo" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
         <div class="box" style="width: 400px; max-width: 90%;">
@@ -322,11 +322,8 @@
         function abrirPromo(id, nome, precoAtual, precoPromo, statusAtual) {
             document.getElementById('modalPromo').style.display = 'flex';
             document.getElementById('tituloPromo').innerText = "🤑 Oferta: " + nome;
-            
             document.getElementById('formPromo').action = "/admin/promocao/" + id;
-            
-            document.getElementById('selectPromoStatus').value = statusAtual;
-            
+            document.getElementById('selectPromoStatus').value = (statusAtual === 'True' || statusAtual === '1') ? "1" : "0";
             if (precoPromo > 0) {
                 document.getElementById('inputPrecoPromo').value = precoPromo;
             } else {

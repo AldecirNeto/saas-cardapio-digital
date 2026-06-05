@@ -64,27 +64,36 @@
                     {% for c in clientes %}
                     <tr>
                         <td>
-                            <strong>{{ c[1] }}</strong><br>
-                            <small style="color: #94a3b8; text-transform: uppercase;">PLANO: {{ c[2] }}</small>
+                            {# c.nome e c.plano em vez de c[1] e c[2] #}
+                            <strong>{{ c.nome }}</strong><br>
+                            <small style="color: #94a3b8; text-transform: uppercase;">PLANO: {{ c.plano }}</small>
                         </td>
                         <td>
-                            {% if c[3] == 'ativo' %}
+                            {# c.status em vez de c[3] #}
+                            {% if c.status == 'ativo' %}
                                 <span class="badge badge-ativo">Ativo</span>
                             {% else %}
                                 <span class="badge badge-bloqueado">Bloqueado</span>
                             {% endif %}
                         </td>
-                        <form action="/superadmin/editar_financeiro/{{ c[0] }}" method="POST">
+                        {# c.id em vez de c[0] na action do form #}
+                        <form action="/superadmin/editar_financeiro/{{ c.id }}" method="POST">
                             <td>
-                                Dia <input type="number" name="dia_vencimento" class="input-fin" value="{{ c[5] if c[5] else 5 }}" min="1" max="31" style="width: 60px;">
+                                {# c.dia_vencimento em vez de c[5] #}
+                                Dia <input type="number" name="dia_vencimento" class="input-fin" value="{{ c.dia_vencimento if c.dia_vencimento else 5 }}" min="1" max="31" style="width: 60px;">
                             </td>
                             <td>
-                                R$ <input type="number" name="valor_plano" class="input-fin" value="{{ c[4] if c[4] else 0.0 }}" step="0.01" style="width: 100px;">
+                                {# c.valor_plano em vez de c[4] #}
+                                R$ <input type="number" name="valor_plano" class="input-fin" value="{{ c.valor_plano if c.valor_plano else 0.0 }}" step="0.01" style="width: 100px;">
                             </td>
                             <td>
                                 <button type="submit" class="btn-salvar">💾 Salvar</button>
                             </td>
                         </form>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 40px;">Nenhum cliente cadastrado no financeiro.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

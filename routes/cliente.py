@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, session
 from datetime import datetime
-import sqlite3
+from db import get_conexao
+from psycopg2.extras import RealDictCursor
 
 # Criando o Blueprint do Cliente (Cardápio e Checkout)
 cliente_bp = Blueprint('cliente', __name__)
@@ -17,99 +18,98 @@ def salvar_carrinho(carrinho):
 
 @cliente_bp.route("/<slug_restaurante>")
 def cardapio_cliente(slug_restaurante):
-    print(f"Buscando restaurante com slug: {slug_restaurante}")
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    # Usando RealDictCursor para garantir acesso por nome de coluna (ex: restaurante['id'])
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute("SELECT id, nome, cor_tema, status, cor_fundo, logo, fundo_imagem, cor_card, cor_texto, cor_texto_botao FROM restaurantes WHERE slug = ?", (slug_restaurante,))
-    restaurante = cursor.fetchone()
+    try:
+        # 1. Busca os dados do restaurante
+        cursor.execute("""
+            SELECT id, nome, cor_tema, status, cor_fundo, logo, fundo_imagem, 
+                   cor_card, cor_texto, cor_texto_botao 
+            FROM restaurantes WHERE slug = %s
+        """, (slug_restaurante,))
+        restaurante = cursor.fetchone()
+        
+        if not restaurante:
+            return f"Restaurante '{slug_restaurante}' não encontrado!", 404
+        
+        # 2. Verifica se o restaurante está ativo
+        if restaurante['status'] != 'ativo':
+            return "<h1>Serviço Temporariamente Indisponível</h1><p>Este cardápio está em manutenção.</p>", 403
+        
+        # 🔥 MÁGICA AQUI: Salva o slug na sessão para a função de remover/adicionar saber para onde voltar
+        session['ultimo_slug'] = slug_restaurante
+        
+        # 3. Busca os itens do cardápio deste restaurante
+        cursor.execute("""
+            SELECT * FROM cardapio 
+            WHERE restaurante_id = %s 
+            ORDER BY categoria ASC, em_promo DESC, nome ASC
+        """, (restaurante['id'],))
+        itens = cursor.fetchall()
+
+        carrinho_atual = get_carrinho()
+        
+        return render_template("index.html", 
+                               cardapio=itens, 
+                               restaurante_nome=restaurante['nome'], 
+                               cor_tema=restaurante['cor_tema'], 
+                               cor_fundo=restaurante['cor_fundo'] or '#f4f4f4',
+                               cor_card=restaurante['cor_card'] or '#ffffff', 
+                               cor_texto=restaurante['cor_texto'] or '#2c3e50', 
+                               logo=restaurante['logo'],              
+                               fundo_img=restaurante['fundo_imagem'],    
+                               restaurante_id=restaurante['id'], 
+                               carrinho=carrinho_atual,
+                               cor_texto_botao=restaurante['cor_texto_botao'] or '#ffffff')
     
-    if not restaurante:
+    except Exception as e:
+        print(f"Erro no cardápio: {e}")
+        return "Erro interno ao carregar o cardápio.", 500
+    finally:
+        cursor.close()
         conexao.close()
-        return f"Restaurante '{slug_restaurante}' não encontrado!", 404
-    
-    # VERIFICA SE ESTÁ ATIVO (Bloqueio de Inadimplência)
-    if restaurante[3] != 'ativo':
-        conexao.close()
-        return "<h1>Serviço Temporariamente Indisponível</h1><p>Este cardápio está em manutenção.</p>", 403
-    
-    res_id = restaurante[0]
-    res_nome = restaurante[1]
-    res_cor = restaurante[2]
-    res_cor_fundo = restaurante[4] if restaurante[4] else '#f4f4f4'
-    res_logo = restaurante[5]
-    res_fundo_img = restaurante[6]
-    res_cor_card = restaurante[7] if restaurante[7] else '#ffffff'  
-    res_cor_texto = restaurante[8] if restaurante[8] else '#2c3e50'
-    res_cor_texto_botao = restaurante[9] if restaurante[9] else '#ffffff'
-
-    cursor.execute("SELECT * FROM cardapio WHERE restaurante_id = ? ORDER BY categoria ASC, em_promo DESC, nome ASC", (res_id,))
-    itens = cursor.fetchall()
-
-    conexao.close()
-    
-    carrinho_atual = get_carrinho()
-    
-    return render_template("index.html", 
-                           cardapio=itens, 
-                           restaurante_nome=res_nome, 
-                           cor_tema=res_cor, 
-                           cor_fundo=res_cor_fundo,
-                           cor_card=res_cor_card, 
-                           cor_texto=res_cor_texto, 
-                           logo=res_logo,              
-                           fundo_img=res_fundo_img,    
-                           restaurante_id=res_id, 
-                           carrinho=carrinho_atual,
-                           cor_texto_botao=res_cor_texto_botao)
 
 @cliente_bp.route('/carrinho/adicionar/<int:id_produto>', methods=['POST'])
 def adicionar_ao_carrinho(id_produto):
-    import sqlite3
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
     try:
-        print(f"\n🛒 CHEGOU PEDIDO DE ADIÇÃO! Produto ID: {id_produto}")
-        print(f"📦 DADOS DO FORMULÁRIO: {request.form}")
-        # 1. Pegamos tudo que o Modal enviou
         quantidade = int(request.form.get('quantidade', 1))
         observacao = request.form.get('observacao', '')
         variacao_id = request.form.get('variacao_id') 
         complementos_ids = request.form.getlist('complemento_id') 
 
-        # 2. Pega o Produto Original
-        cursor.execute("SELECT nome, preco FROM cardapio WHERE id = ?", (id_produto,))
+        cursor.execute("SELECT nome, preco FROM cardapio WHERE id = %s", (id_produto,))
         produto = cursor.fetchone()
         if not produto:
             return jsonify({"sucesso": False, "erro": "Produto não encontrado"})
 
-        nome_final = produto[0]
-        preco_unitario = produto[1]
+        nome_final = produto['nome']
+        preco_unitario = float(produto['preco'])
 
-        # 3. Calcula a Variação (Se não for a Original)
         if variacao_id and variacao_id != 'base':
-            cursor.execute("SELECT nome, preco_adicional FROM variacoes WHERE id = ?", (variacao_id,))
+            cursor.execute("SELECT nome, preco_adicional FROM variacoes WHERE id = %s", (variacao_id,))
             var_data = cursor.fetchone()
             if var_data:
-                nome_final += f" ({var_data[0]})"
-                preco_unitario += var_data[1]
+                nome_final += f" ({var_data['nome']})"
+                preco_unitario += float(var_data['preco_adicional'])
 
-        # 4. Calcula os Complementos (CORRIGIDO: Só busca se a lista NÃO estiver vazia)
         nomes_complementos = []
-        if complementos_ids and len(complementos_ids) > 0:
-            placeholders = ','.join('?' for _ in complementos_ids)
-            cursor.execute(f"SELECT nome, preco FROM complementos WHERE id IN ({placeholders})", complementos_ids)
+        if complementos_ids:
+            # Postgres IN clause com psycopg2 exige uma tupla
+            cursor.execute("SELECT nome, preco FROM complementos WHERE id IN %s", (tuple(complementos_ids),))
             comps_data = cursor.fetchall()
             
             for c in comps_data:
-                nomes_complementos.append(c[0])
-                preco_unitario += c[1]
+                nomes_complementos.append(c['nome'])
+                preco_unitario += float(c['preco'])
 
             if nomes_complementos:
                 nome_final += " + " + ", ".join(nomes_complementos)
 
-        # 5. Prepara o pacote pro carrinho
         subtotal = preco_unitario * quantidade
         item_carrinho = {
             "id_produto": id_produto,
@@ -120,71 +120,57 @@ def adicionar_ao_carrinho(id_produto):
             "subtotal": subtotal
         }
 
-        # 6. Salva na Sessão
-        if 'carrinho' not in session:
-            session['carrinho'] = []
-        
-        session['carrinho'].append(item_carrinho)
-        session.modified = True
+        carrinho = get_carrinho()
+        carrinho.append(item_carrinho)
+        salvar_carrinho(carrinho)
 
         return jsonify({"sucesso": True, "mensagem": "Adicionado com sucesso!"})
 
     except Exception as e:
-        print(f"🔥 ERRO CRÍTICO AO ADICIONAR NO CARRINHO: {e}")
-        return jsonify({"sucesso": False, "erro": "Erro interno no servidor"}), 500
-
+        print(f"🔥 ERRO NO CARRINHO: {e}")
+        return jsonify({"sucesso": False, "erro": "Erro interno"}), 500
     finally:
-        # A BLINDAGEM: Fechar a conexão AQUI garante que o banco nunca trave.
         conexao.close()
 
 @cliente_bp.route('/api/produto/<int:produto_id>')
 def api_detalhes_produto(produto_id):
-    import sqlite3
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
     try:
-        # 1. Busca os dados do produto
-        cursor.execute("SELECT id, nome, descricao, preco, categoria FROM cardapio WHERE id = ?", (produto_id,))
+        cursor.execute("SELECT id, nome, descricao, preco, categoria FROM cardapio WHERE id = %s", (produto_id,))
         prod = cursor.fetchone()
-        
         if not prod:
             return jsonify({"erro": "Produto não encontrado"}), 404
 
-        produto_categoria = prod[4]
-
-        # 2. Busca IDs Ocultos da Lista Negra
-        cursor.execute("SELECT tipo_opcao, opcao_id FROM opcoes_ocultas WHERE produto_id = ?", (produto_id,))
+        cursor.execute("SELECT tipo_opcao, opcao_id FROM opcoes_ocultas WHERE produto_id = %s", (produto_id,))
         ocultas = cursor.fetchall()
-        ids_var_ocultas = [o[1] for o in ocultas if o[0] == 'variacao']
-        ids_comp_ocultos = [o[1] for o in ocultas if o[0] == 'complemento']
+        ids_var_ocultas = [o['opcao_id'] for o in ocultas if o['tipo_opcao'] == 'variacao']
+        ids_comp_ocultos = [o['opcao_id'] for o in ocultas if o['tipo_opcao'] == 'complemento']
 
-        # 3. Busca Variações (Locais + Categoria)
-        cursor.execute("SELECT id, nome, preco_adicional FROM variacoes WHERE produto_id = ? OR categoria_alvo = ?", (produto_id, produto_categoria))
-        variacoes_brutas = cursor.fetchall()
-        variacoes = [{"id": v[0], "nome": v[1], "preco": v[2]} for v in variacoes_brutas if v[0] not in ids_var_ocultas]
+        cursor.execute("""
+            SELECT id, nome, preco_adicional FROM variacoes 
+            WHERE produto_id = %s OR categoria_alvo = %s
+        """, (produto_id, prod['categoria']))
+        variacoes = [{"id": v['id'], "nome": v['nome'], "preco": float(v['preco_adicional'])} 
+                     for v in cursor.fetchall() if v['id'] not in ids_var_ocultas]
 
-        # 4. Busca Complementos (Locais + Categoria)
-        cursor.execute("SELECT id, nome, preco FROM complementos WHERE produto_id = ? OR categoria_alvo = ?", (produto_id, produto_categoria))
-        complementos_brutos = cursor.fetchall()
-        complementos = [{"id": c[0], "nome": c[1], "preco": c[2]} for c in complementos_brutos if c[0] not in ids_comp_ocultos]
+        cursor.execute("""
+            SELECT id, nome, preco FROM complementos 
+            WHERE produto_id = %s OR categoria_alvo = %s
+        """, (produto_id, prod['categoria']))
+        complementos = [{"id": c['id'], "nome": c['nome'], "preco": float(c['preco'])} 
+                        for c in cursor.fetchall() if c['id'] not in ids_comp_ocultos]
 
         return jsonify({
-            "id": prod[0],
-            "nome": prod[1],
-            "descricao": prod[2],
-            "preco_base": prod[3],
+            "id": prod['id'],
+            "nome": prod['nome'],
+            "descricao": prod['descricao'],
+            "preco_base": float(prod['preco']),
             "variacoes": variacoes,
             "complementos": complementos
         })
-
-    except Exception as e:
-        # SE QUEBRAR, ELE VAI GRITAR O ERRO AQUI NO TERMINAL:
-        print(f"🔥 ERRO NA API DO MODAL: {e}")
-        return jsonify({"erro": "Erro interno no servidor."}), 500
-
     finally:
-        # Isso garante que o banco NUNCA mais vai ficar travado
         conexao.close()
 
 @cliente_bp.route("/remover_carrinho/<int:indice>")
@@ -193,7 +179,41 @@ def remover_do_carrinho(indice):
     if 0 <= indice < len(carrinho):
         carrinho.pop(indice)
         salvar_carrinho(carrinho)
-    return redirect(request.referrer)
+    return redirect(request.referrer or url_for('cliente.cardapio_cliente', slug_restaurante=session.get('ultimo_slug', '')))
+
+
+
+
+@cliente_bp.route("/api/verificar_recompensas", methods=["POST"])
+def verificar_recompensas():
+    dados = request.json
+    tel = dados.get("telefone", "").strip()
+    res_id = dados.get("restaurante_id")
+
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
+
+    cursor.execute("SELECT COUNT(id) as qtd FROM pedidos WHERE restaurante_id = %s AND telefone_cliente = %s", (res_id, tel))
+    proximo = cursor.fetchone()['qtd'] + 1
+
+    # Busca cupom por meta ou o último global
+    cursor.execute("""
+        SELECT * FROM cupons 
+        WHERE restaurante_id = %s AND status = 'ativo' AND (meta_pedidos = %s OR tipo_limite = 'global')
+        ORDER BY meta_pedidos DESC, id DESC LIMIT 1
+    """, (res_id, proximo))
+    cupom = cursor.fetchone()
+    conexao.close()
+
+    if cupom:
+        texto = f"{int(cupom['valor'])}% OFF" if cupom['tipo'] == 'porcentagem' else f"R$ {cupom['valor']:.2f} OFF"
+        return jsonify({
+            "status": "sucesso", "codigo": cupom['codigo'], "texto_desconto": texto,
+            "proximo_pedido": proximo, "valor_minimo": float(cupom['valor_minimo'])
+        })
+    
+    return jsonify({"status": "vazio"})
+
 
 @cliente_bp.route("/api/validar_cupom", methods=["POST"])
 def validar_cupom():
@@ -205,222 +225,130 @@ def validar_cupom():
         valor_carrinho = float(dados.get("total", 0.0))
         device_id = dados.get("device_id", "").strip()
         
-        conexao = sqlite3.connect("Autoatendimento.db")
-        cursor = conexao.cursor()
+        conexao = get_conexao()
+        cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
-        cursor.execute('''SELECT id, tipo, valor, valor_minimo, limite_uso, qtd_usos, validade, status, meta_pedidos, tipo_limite
-                        FROM cupons WHERE codigo = ? AND restaurante_id = ?''', (codigo, restaurante_id))
+        cursor.execute("""
+            SELECT * FROM cupons WHERE codigo = %s AND restaurante_id = %s
+        """, (codigo, restaurante_id))
         cupom = cursor.fetchone()
 
         if not cupom:
             conexao.close()
             return jsonify({"status": "erro", "mensagem": "Cupom inválido!"}), 404
         
-        id_cupom, tipo, valor_desc, v_minimo, limite, usados, validade, status, meta, tipo_limite = cupom
-
-        if status != 'ativo':
+        if cupom['status'] != 'ativo':
             conexao.close()
-            return jsonify({"status": "erro", "mensagem": "Este cupom não está mais ativo."})
+            return jsonify({"status": "erro", "mensagem": "Cupom inativo."})
 
-        if validade and datetime.now().strftime("%Y-%m-%d") > validade:
+        # No Postgres, comparamos datas diretamente
+        if cupom['validade'] and datetime.now().date() > cupom['validade']:
             conexao.close()
-            return jsonify({"status": "erro", "mensagem": "Este cupom expirou."})
+            return jsonify({"status": "erro", "mensagem": "Cupom expirou."})
 
-        if limite > 0 and usados >= limite:
+        if cupom['limite_uso'] > 0 and cupom['qtd_usos'] >= cupom['limite_uso']:
             conexao.close()
-            return jsonify({"status": "erro", "mensagem": "Este cupom já atingiu o limite de usos."})
+            return jsonify({"status": "erro", "mensagem": "Limite atingido."})
 
-        if valor_carrinho < v_minimo:
+        if valor_carrinho < float(cupom['valor_minimo']):
             conexao.close()
-            return jsonify({"status": "erro", "mensagem": f"Pedido mínimo para este cupom é R$ {v_minimo:.2f}"})
+            return jsonify({"status": "erro", "mensagem": f"Mínimo R$ {cupom['valor_minimo']:.2f}"})
 
-        if tipo_limite == 'por_cliente':
-            cursor.execute('''
-                SELECT COUNT(id) FROM pedidos 
-                WHERE restaurante_id = ? AND cupom_usado = ? AND (
-                    (telefone_cliente = ? AND telefone_cliente != '') OR 
-                    (device_id = ? AND device_id != '')
+        if cupom['tipo_limite'] == 'por_cliente':
+            cursor.execute("""
+                SELECT COUNT(id) as qtd FROM pedidos 
+                WHERE restaurante_id = %s AND cupom_usado = %s AND (
+                    (telefone_cliente = %s AND telefone_cliente != '') OR 
+                    (device_id = %s AND device_id != '')
                 )
-            ''', (restaurante_id, codigo, telefone, device_id))
-            
-            ja_usou_antes = cursor.fetchone()[0]
-            if ja_usou_antes > 0:
+            """, (restaurante_id, codigo, telefone, device_id))
+            if cursor.fetchone()['qtd'] > 0:
                 conexao.close()
-                return jsonify({"status": "erro", "mensagem": "Este aparelho ou telefone já utilizou este cupom de uso único."})
+                return jsonify({"status": "erro", "mensagem": "Já utilizou este cupom."})
 
-        if meta > 0:
-            cursor.execute("SELECT COUNT(id) FROM pedidos WHERE restaurante_id = ? AND telefone_cliente = ?", (restaurante_id, telefone))
-            qtd_pedidos_anteriores = cursor.fetchone()[0]
-            proximo_pedido = qtd_pedidos_anteriores + 1
-
-            if proximo_pedido != meta:
-                conexao.close()
-                return jsonify({
-                    "status": "erro", 
-                    "mensagem": f"Cupom exclusivo para o seu {meta}º pedido. Você está no {proximo_pedido}º."
-                })
-
-        desconto_aplicado = valor_carrinho * (valor_desc / 100) if tipo == 'porcentagem' else valor_desc
+        desconto = valor_carrinho * (float(cupom['valor']) / 100) if cupom['tipo'] == 'porcentagem' else float(cupom['valor'])
 
         conexao.close()
-        return jsonify({
-            "status": "sucesso",
-            "desconto": desconto_aplicado,
-            "mensagem": "Cupom aplicado com sucesso!"
-        })
-
+        return jsonify({"status": "sucesso", "desconto": desconto, "mensagem": "Cupom aplicado!"})
     except Exception as e:
-        print(f"Erro no Back-end ao validar cupom: {e}")
-        return jsonify({"status": "erro", "mensagem": "Erro interno no servidor."}), 500
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @cliente_bp.route("/finalizar", methods=["POST"])
 def finalizar_pedido():
-    mesa_digitada = request.form.get("numero_mesa")
+    # 1. Coleta de dados
+    mesa = request.form.get("numero_mesa")
     forma_pagamento = request.form.get("forma_pagamento")
-    observacao_cliente = request.form.get("observacao") 
-    restaurante_id = request.form.get("restaurante_id")
-    caminho_de_volta = request.form.get("url_voltar")
+    obs_cliente = request.form.get("observacao") 
+    res_id = request.form.get("restaurante_id")
     nome_cliente = request.form.get("nome_cliente", "")
-    telefone_cliente = request.form.get("telefone_cliente", "")
+    tel_cliente = request.form.get("telefone_cliente", "")
     device_id = request.form.get("device_id", "")
+    codigo_cupom = request.form.get("cupom_codigo")
+    caminho_de_volta = request.form.get("url_voltar") or "/"
 
-    status = f"pendente - {forma_pagamento}"
-
-    nome_itens = []
-    total = 0
     carrinho = get_carrinho()
+    nome_itens = []
+    total = 0.0
 
     for item in carrinho:
-        detalhe_item = f"{item['quantidade']}x {item['nome']}"
-        if item['observacao'].strip() != "":
-            detalhe_item += f" (Obs: {item['observacao']})"
-        nome_itens.append(detalhe_item)
-        total += item['subtotal']
+        detalhe = f"{item['quantidade']}x {item['nome']}"
+        if item.get('observacao') and item['observacao'].strip():
+            detalhe += f" (Obs: {item['observacao']})"
+        nome_itens.append(detalhe)
+        total += float(item['subtotal'])
 
-    itens_juntos = ", ".join(nome_itens)
-    data_hora = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()    
-
-    codigo_cupom = request.form.get("cupom_codigo")
-    
-    if codigo_cupom:
-        cursor.execute("SELECT tipo, valor, valor_minimo, limite_uso, qtd_usos, validade, status, meta_pedidos, tipo_limite FROM cupons WHERE codigo = ? AND restaurante_id = ?", (codigo_cupom.upper(), restaurante_id))
-        cupom_usado = cursor.fetchone()
-        
-        if cupom_usado:
-            t_desc, v_desc, v_min, lim, usos, val, stat, meta, t_limite = cupom_usado
-            cupom_valido = True
-            
-            if stat != 'ativo': cupom_valido = False
-            if lim > 0 and usos >= lim: cupom_valido = False
-            if total < v_min: cupom_valido = False
-            if val and datetime.now().strftime("%Y-%m-%d") > val: cupom_valido = False
-            
-            if meta > 0:
-                cursor.execute("SELECT COUNT(id) FROM pedidos WHERE restaurante_id = ? AND telefone_cliente = ?", (restaurante_id, telefone_cliente))
-                pedidos_ant = cursor.fetchone()[0]
-                if (pedidos_ant + 1) != meta: cupom_valido = False
-                
-            if t_limite == 'por_cliente':
-                cursor.execute("SELECT COUNT(id) FROM pedidos WHERE restaurante_id = ? AND cupom_usado = ? AND (telefone_cliente = ? OR (device_id = ? AND device_id != ''))", (restaurante_id, codigo_cupom.upper(), telefone_cliente, device_id))
-                ja_usou = cursor.fetchone()[0]
-                if ja_usou > 0: cupom_valido = False
-
-            if cupom_valido:
-                if t_desc == 'porcentagem':
-                    total -= total * (v_desc / 100)
-                else:
-                    total -= v_desc
-                    
-                if total < 0: total = 0 
-                
-                cursor.execute('''UPDATE cupons SET qtd_usos = qtd_usos + 1 WHERE codigo = ? AND restaurante_id = ?''', (codigo_cupom.upper(), restaurante_id))
-
-                if lim > 0 and (usos + 1) >= lim:
-                    cursor.execute('''UPDATE cupons SET status = 'inativo' WHERE codigo = ? AND restaurante_id = ?''', (codigo_cupom.upper(), restaurante_id))     
-
-    cursor.execute(''' 
-        INSERT INTO pedidos (mesa, itens, total, status, data_hora, observacao, restaurante_id, nome_cliente, telefone_cliente, cupom_usado, device_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (mesa_digitada, itens_juntos, total, status, data_hora, observacao_cliente, restaurante_id, nome_cliente, telefone_cliente, codigo_cupom or '', device_id))
-
-    pedido_id = cursor.lastrowid
-    
-    cursor.execute("SELECT chave_pix, telefone_whatsapp FROM restaurantes WHERE id = ?", (restaurante_id,))
-    dados_res = cursor.fetchone()
-
-    chave_pix_restaurante = dados_res[0] if dados_res and dados_res[0] else "chave não informada"
-    whatsapp_restaurante = dados_res[1] if dados_res and dados_res[1] else ""
-
-    conexao.commit()
-    conexao.close()
-    
-    # Esvazia o carrinho apenas deste cliente na sessão!
-    session['carrinho'] = []
-    session.modified = True
-    
-    return render_template("pagamento.html", 
-                           mesa=mesa_digitada, 
-                           total=total, 
-                           forma_pagamento=forma_pagamento,
-                           url_voltar=caminho_de_volta,
-                           pedido_id=pedido_id,
-                           itens="\n".join(nome_itens),
-                           nome_cliente=nome_cliente,
-                           chave_pix=chave_pix_restaurante,
-                           telefone_whatsapp=whatsapp_restaurante)
-
-@cliente_bp.route("/api/verificar_recompensas", methods=["POST"])
-def verificar_recompensas():
-    dados = request.json
-    telefone = dados.get("telefone", "").strip()
-    restaurante_id = dados.get("restaurante_id")
-
-    conexao = sqlite3.connect("Autoatendimento.db")
+    # 2. Conexão com AUTOCOMMIT (Força o banco a salvar na hora)
+    conexao = get_conexao()
+    conexao.autocommit = True # <-- ISSO AQUI É A CHAVE
     cursor = conexao.cursor()
 
-    if telefone:
-        cursor.execute('''SELECT COUNT(id) FROM pedidos WHERE restaurante_id = ? AND telefone_cliente = ?''', (restaurante_id, telefone))
-        qtd_pedidos_anteriores = cursor.fetchone()[0]
-    else:
-        qtd_pedidos_anteriores = 0
+    try:
+        # Lógica de Cupom
+        if codigo_cupom:
+            cursor.execute("SELECT id, status, tipo, valor FROM cupons WHERE codigo = %s AND restaurante_id = %s", (codigo_cupom.upper(), res_id))
+            cupom = cursor.fetchone()
+            if cupom and cupom[1] == 'ativo':
+                desconto = total * (float(cupom[3]) / 100) if cupom[2] == 'porcentagem' else float(cupom[3])
+                total -= desconto
+                cursor.execute("UPDATE cupons SET qtd_usos = qtd_usos + 1 WHERE id = %s", (cupom[0],))
+
+        status_txt = f"pendente - {forma_pagamento}"
+        itens_txt = ", ".join(nome_itens)
+
+        # 3. Insert com LOG de verificação
+        print(f"--- TENTANDO GRAVAR PEDIDO PARA RESTAURANTE {res_id} ---")
         
-    proximo_pedido = qtd_pedidos_anteriores + 1
+        cursor.execute("""
+            INSERT INTO pedidos (mesa, itens, total, status, data_hora, observacao, restaurante_id, nome_cliente, telefone_cliente, cupom_usado, device_id) 
+            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP, %s, %s, %s, %s, %s, %s) RETURNING id
+        """, (str(mesa), itens_txt, float(total), status_txt, obs_cliente, int(res_id), nome_cliente, tel_cliente, codigo_cupom or '', device_id))
+        
+        pedido_id = cursor.fetchone()[0]
+        print(f"--- PEDIDO GRAVADO COM SUCESSO! ID: {pedido_id} ---")
 
-    cursor.execute('''
-        SELECT codigo, tipo, valor, valor_minimo, limite_uso, qtd_usos, tipo_limite 
-        FROM cupons 
-        WHERE restaurante_id = ? AND status = 'ativo' AND meta_pedidos = ? AND tipo_limite = 'por_cliente'
-    ''', (restaurante_id, proximo_pedido))
-    cupom = cursor.fetchone()
+        # Dados para o template
+        cursor.execute("SELECT chave_pix, telefone_whatsapp FROM restaurantes WHERE id = %s", (res_id,))
+        # Como o cursor não é RealDict, pegamos por índice
+        res_row = cursor.fetchone()
+        chave_pix = res_row[0] if res_row else ''
+        wpp = res_row[1] if res_row else ''
 
-    if not cupom:
-        cursor.execute('''
-            SELECT codigo, tipo, valor, valor_minimo, limite_uso, qtd_usos, tipo_limite 
-            FROM cupons 
-            WHERE restaurante_id = ? AND status = 'ativo' AND tipo_limite = 'global'
-            ORDER BY id DESC LIMIT 1
-        ''', (restaurante_id,))
-        cupom = cursor.fetchone()
+        # Limpa carrinho e finaliza
+        session['carrinho'] = []
+        session.modified = True
+        
+        return render_template("pagamento.html", 
+                               mesa=mesa, total=total, forma_pagamento=forma_pagamento,
+                               url_voltar=caminho_de_volta,
+                               pedido_id=pedido_id, 
+                               itens="\n".join(nome_itens),
+                               nome_cliente=nome_cliente, 
+                               chave_pix=chave_pix,
+                               telefone_whatsapp=wpp)
 
-    conexao.close()
-
-    if cupom:
-        codigo, tipo, valor, v_minimo, limite, usos, t_limite = cupom
-        texto_desconto = f"{int(valor)}% OFF" if tipo == 'porcentagem' else f"R$ {valor:.2f} OFF"
-        restantes = limite - usos if limite > 0 else 0
-            
-        return jsonify({
-            "status": "sucesso",
-            "codigo": codigo,
-            "texto_desconto": texto_desconto,
-            "proximo_pedido": proximo_pedido,
-            "valor_minimo": v_minimo,
-            "tipo_limite": t_limite,
-            "limite_total": limite,
-            "cupons_restantes": restantes
-        })
-    
-    return jsonify({"status": "vazio"})
+    except Exception as e:
+        print(f"🚨 ERRO REAL NO BANCO: {e}")
+        return f"Erro: {e}", 500
+    finally:
+        cursor.close()
+        conexao.close()

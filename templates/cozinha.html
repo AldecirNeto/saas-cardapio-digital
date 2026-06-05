@@ -18,30 +18,32 @@
             <div class="ticket">
                 
                 <div class="ticket-header">
-                    <h2 class="mesa-titulo">Mesa {{ pedido[1] }}</h2>
-                    <span class="id-pedido">#{{ pedido[0] }}</span>
+                    <h2 class="mesa-titulo">Mesa {{ pedido.mesa }}</h2>
+                    <span class="id-pedido">#{{ pedido.id }}</span>
                 </div>
                 
                 <div class="ticket-body">
                     <div class="info-topo">
-                        <span class="horario-pedido">🕒 {{ pedido[5] }}</span>
-                        <span class="badge-pagamento">💰 {{ pedido[4] }}</span>
+                        <span class="horario-pedido">🕒 {{ pedido.data_hora }}</span>
+                        <span class="badge-pagamento">💰 {{ pedido.status }}</span>
                     </div>
 
                     <ul class="lista-itens">
-                        {% for item in pedido[2].split(', ') %}
-                            <li>{{ item }}</li>
-                        {% endfor %}
+                        {% if pedido.itens %}
+                            {% for item in pedido.itens.split(', ') %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        {% endif %}
                     </ul>
 
-                    {% if pedido[6] %}
+                    {% if pedido.observacao %}
                         <div class="alerta-obs">
-                            ⚠️ OBS: {{ pedido[6] }}
+                            ⚠️ OBS: {{ pedido.observacao }}
                         </div>
                     {% endif %}
                 </div>
                 
-                <form action="/pronto/{{ pedido[0] }}" method="POST" class="form-pronto">
+                <form action="/pronto/{{ pedido.id }}" method="POST" class="form-pronto">
                     <button type="submit" class="btn-pronto">✔️ Pronto</button>
                 </form>
 
@@ -55,14 +57,12 @@
     </div>
 
     <script>
-        // TRUQUE DE TECH LEAD: Colocamos entre aspas "" e convertemos para Número (Number), assim o VS Code não acusa erro!
         const totalPedidosAtual = Number("{{ pedidos|length }}");
         const totalAnterior = sessionStorage.getItem('qtd_pedidos_cozinha');
 
-        // Se o número de pedidos agora for maior que o guardado na memória, toca o BIP!
         if (totalAnterior !== null && totalPedidosAtual > Number(totalAnterior)) {
             const somBip = new Audio('/static/audio/bip-geral.mp3');
-            somBip.play().catch(e => console.log("Áudio bloqueado pelo navegador. Clique na tela para liberar.", e));
+            somBip.play().catch(e => console.log("Áudio bloqueado pelo navegador.", e));
         }
         
         sessionStorage.setItem('qtd_pedidos_cozinha', totalPedidosAtual);

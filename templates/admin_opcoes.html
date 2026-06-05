@@ -56,22 +56,23 @@
                 <table>
                     {% for v in variacoes_locais %}
                     <tr>
-                        <td>{{ v[3] }} <small style="color: #3b82f6;">(Local)</small></td>
-                        <td>R$ {{ "%.2f"|format(v[4]) }}</td>
-                        <td><a href="{{ url_for('admin.deletar_opcao', tipo='variacao', id_opcao=v[0], produto_id=produto_id) }}" class="btn-del">Excluir</a></td>
+                        {# v.nome e v.preco_adicional em vez de v[3] e v[4] #}
+                        <td>{{ v.nome }} <small style="color: #3b82f6;">(Local)</small></td>
+                        <td>R$ {{ "%.2f"|format(v.preco_adicional) }}</td>
+                        <td><a href="{{ url_for('admin.deletar_opcao', tipo='variacao', id_opcao=v.id, produto_id=produto_id) }}" class="btn-del">Excluir</a></td>
                     </tr>
                     {% endfor %}
                     
                     {% for v in variacoes_herdadas %}
                     <tr>
-                        {% if v[0] in ids_variacoes_ocultas %}
-                            <td class="riscado">{{ v[3] }} <small>(Herdado)</small></td>
-                            <td class="riscado">R$ {{ "%.2f"|format(v[4]) }}</td>
-                            <td><a href="{{ url_for('admin.restaurar_opcao', tipo='variacao', id_opcao=v[0], produto_id=produto_id) }}" class="btn-restore">Restaurar</a></td>
+                        {% if v.id in ids_variacoes_ocultas %}
+                            <td class="riscado">{{ v.nome }} <small>(Herdado)</small></td>
+                            <td class="riscado">R$ {{ "%.2f"|format(v.preco_adicional) }}</td>
+                            <td><a href="{{ url_for('admin.restaurar_opcao', tipo='variacao', id_opcao=v.id, produto_id=produto_id) }}" class="btn-restore">Restaurar</a></td>
                         {% else %}
-                            <td>{{ v[3] }} <small style="color: #64748b;">(Herdado)</small></td>
-                            <td>R$ {{ "%.2f"|format(v[4]) }}</td>
-                            <td><a href="{{ url_for('admin.ocultar_opcao', tipo='variacao', id_opcao=v[0], produto_id=produto_id) }}" class="btn-hide">Desativar</a></td>
+                            <td>{{ v.nome }} <small style="color: #64748b;">(Herdado)</small></td>
+                            <td>R$ {{ "%.2f"|format(v.preco_adicional) }}</td>
+                            <td><a href="{{ url_for('admin.ocultar_opcao', tipo='variacao', id_opcao=v.id, produto_id=produto_id) }}" class="btn-hide">Desativar</a></td>
                         {% endif %}
                     </tr>
                     {% endfor %}
@@ -83,22 +84,23 @@
                 <table>
                     {% for c in complementos_locais %}
                     <tr>
-                        <td>{{ c[3] }} <small style="color: #3b82f6;">(Local)</small></td>
-                        <td>R$ {{ "%.2f"|format(c[4]) }}</td>
-                        <td><a href="{{ url_for('admin.deletar_opcao', tipo='complemento', id_opcao=c[0], produto_id=produto_id) }}" class="btn-del">Excluir</a></td>
+                        {# c.nome e c.preco em vez de c[3] e c[4] #}
+                        <td>{{ c.nome }} <small style="color: #3b82f6;">(Local)</small></td>
+                        <td>R$ {{ "%.2f"|format(c.preco) }}</td>
+                        <td><a href="{{ url_for('admin.deletar_opcao', tipo='complemento', id_opcao=c.id, produto_id=produto_id) }}" class="btn-del">Excluir</a></td>
                     </tr>
                     {% endfor %}
 
-                    {% for c in complementos_herdados %}
+                    {% for c in complementos_herdadas %}
                     <tr>
-                        {% if c[0] in ids_complementos_ocultos %}
-                            <td class="riscado">{{ c[3] }} <small>(Herdado)</small></td>
-                            <td class="riscado">R$ {{ "%.2f"|format(c[4]) }}</td>
-                            <td><a href="{{ url_for('admin.restaurar_opcao', tipo='complemento', id_opcao=c[0], produto_id=produto_id) }}" class="btn-restore">Restaurar</a></td>
+                        {% if c.id in ids_complementos_ocultos %}
+                            <td class="riscado">{{ c.nome }} <small>(Herdado)</small></td>
+                            <td class="riscado">R$ {{ "%.2f"|format(c.preco) }}</td>
+                            <td><a href="{{ url_for('admin.restaurar_opcao', tipo='complemento', id_opcao=c.id, produto_id=produto_id) }}" class="btn-restore">Restaurar</a></td>
                         {% else %}
-                            <td>{{ c[3] }} <small style="color: #64748b;">(Herdado)</small></td>
-                            <td>R$ {{ "%.2f"|format(c[4]) }}</td>
-                            <td><a href="{{ url_for('admin.ocultar_opcao', tipo='complemento', id_opcao=c[0], produto_id=produto_id) }}" class="btn-hide">Desativar</a></td>
+                            <td>{{ c.nome }} <small style="color: #64748b;">(Herdado)</small></td>
+                            <td>R$ {{ "%.2f"|format(c.preco) }}</td>
+                            <td><a href="{{ url_for('admin.ocultar_opcao', tipo='complemento', id_opcao=c.id, produto_id=produto_id) }}" class="btn-hide">Desativar</a></td>
                         {% endif %}
                     </tr>
                     {% endfor %}

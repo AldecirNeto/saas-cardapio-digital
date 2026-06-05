@@ -24,5 +24,10 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(cliente_bp)
 
 # 5. RODANDO O SERVIDOR
+
+@app.route('/teste')
+def teste():
+    return "<h1>O Flask está vivo e respondendo!</h1>"
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=5001)

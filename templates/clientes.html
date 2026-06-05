@@ -2,7 +2,6 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CRM e Fidelidade - Painel</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -87,13 +86,13 @@
                                 {% elif loop.index == 3 %}<span class="medalha">🥉</span> 3º
                                 {% else %}<strong style="color: #7f8c8d; margin-left: 8px;">{{ loop.index }}º</strong>{% endif %}
                             </td>
-                            <td><strong style="font-size: 18px;">{{ cliente[0] }}</strong></td>
+                            <td><strong style="font-size: 18px;">{{ cliente.nome if cliente.nome else 'Cliente Sem Nome' }}</strong></td>
                             <td style="color: #3498db; font-weight: bold;">
-                                <a href="https://wa.me/{{ cliente[1] }}" target="_blank" style="color: #3498db; text-decoration: none;">📱 {{ cliente[1] }}</a>
+                                <a href="https://wa.me/{{ cliente.telefone_cliente }}" target="_blank" style="color: #3498db; text-decoration: none;">📱 {{ cliente.telefone_cliente }}</a>
                             </td>
-                            <td><strong style="background: #f1f2f6; padding: 6px 12px; border-radius: 20px;">{{ cliente[2] }} pedidos</strong></td>
-                            <td style="color: #27ae60; font-weight: 900; font-size: 18px;">R$ {{ "%.2f"|format(cliente[3]) }}</td>
-                            <td style="color: #7f8c8d; font-size: 14px;">{{ cliente[4].split(' ')[0] }}</td>
+                            <td><strong style="background: #f1f2f6; padding: 6px 12px; border-radius: 20px;">{{ cliente.qtd_pedidos }} pedidos</strong></td>
+                            <td style="color: #27ae60; font-weight: 900; font-size: 18px;">R$ {{ "%.2f"|format(cliente.valor_gasto) }}</td>
+                            <td style="color: #7f8c8d; font-size: 14px;">{{ cliente.ultimo_pedido.strftime('%d/%m/%Y') if cliente.ultimo_pedido and not cliente.ultimo_pedido is string else cliente.ultimo_pedido }}</td>
                         </tr>
                         {% else %}
                         <tr>

@@ -9,23 +9,28 @@
 <body>
 
     <div class="box-editar">
-        <h2 style="margin-top: 0; color: #2c3e50;">✏️ Editar Produto #{{ produto[0] }}</h2>
+        {# produto.id em vez de produto[0] #}
+        <h2 style="margin-top: 0; color: #2c3e50;">✏️ Editar Produto #{{ produto.id }}</h2>
         
-        <form action="/admin/editar/{{ produto[0] }}" method="POST" enctype="multipart/form-data">
+        <form action="/admin/editar/{{ produto.id }}" method="POST" enctype="multipart/form-data">
             <label>Nome do Lanche:</label>
-            <input type="text" name="nome" value="{{ produto[1] }}" required>
+            {# produto.nome em vez de produto[1] #}
+            <input type="text" name="nome" value="{{ produto.nome }}" required>
 
             <label>Descrição / Ingredientes <small style="color: #7f8c8d; font-weight: normal;">(Opcional)</small>:</label>           
-            <textarea name="descricao" rows="3" style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 15px; transition: 0.3s; resize: vertical;">{% if produto|length > 8 and produto[8] %}{{ produto[8] }}{% endif %}</textarea>
+            {# produto.descricao em vez de produto[8] #}
+            <textarea name="descricao" rows="3" style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 15px; transition: 0.3s; resize: vertical;">{{ produto.descricao if produto.descricao }}</textarea>
 
             <label>Preço (R$):</label>
-            <input type="number" step="0.01" name="preco" value="{{ produto[2] }}" required>
+            {# produto.preco em vez de produto[2] #}
+            <input type="number" step="0.01" name="preco" value="{{ produto.preco }}" required>
 
             <label>Categoria:</label>
             <select name="categoria" required style="width: 100%; padding: 14px 15px; margin-bottom: 20px; border: 1px solid #dfe6e9; border-radius: 8px; box-sizing: border-box; background-color: #fdfdfd; font-family: inherit; font-size: 16px;">
                 {% for cat in categorias_atuais %}
-                    <option value="{{ cat[1] }}" {% if produto|length > 3 and produto[3] == cat[1] %}selected{% endif %}>
-                        {{ cat[1] }}
+                    {# cat.nome em vez de cat[1] e produto.categoria em vez de produto[3] #}
+                    <option value="{{ cat.nome }}" {% if produto.categoria == cat.nome %}selected{% endif %}>
+                        {{ cat.nome }}
                     </option>
                 {% else %}
                     <option value="Geral">Geral</option>

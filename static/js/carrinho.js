@@ -47,10 +47,10 @@ function abrirCarrinho() {
         document.getElementById('modal-carrinho').classList.add('aberto');
         document.getElementById('overlay-carrinho').classList.add('ativo');
         
+        // MUDANÇA: Dispara a busca sempre! Se não tiver telefone salvo, manda string vazia.
+        // Assim o back-end retorna os cupons Globais (Ex: cupom de boas-vindas).
         const telSalvo = localStorage.getItem("saas_tel_cliente") || "";
-        if(telSalvo) {
-            verificarRecompensasSilencioso(telSalvo);
-        }
+        verificarRecompensasSilencioso(telSalvo);
     }
 }
 
@@ -282,3 +282,31 @@ document.getElementById("form-finalizar-pedido")?.addEventListener("submit", fun
         hiddenDevice.value = saasDeviceId;
     }
 });
+
+
+function aplicarCupomDireto() {
+    const codigo = document.getElementById("codigo-recompensa").innerText;
+    const inputCupom = document.getElementById("inputCupom");
+    const btnDireto = document.getElementById("btn-aplicar-direto");
+
+    // Feedback visual imediato no botão do banner
+    btnDireto.innerText = "⏳ Validando...";
+    btnDireto.disabled = true;
+
+    // Preenche o input original silenciosamente e aciona o motor de validação
+    inputCupom.value = codigo;
+    
+    // Como a validação é assíncrona, chamamos a função principal e checamos o resultado
+    aplicarCupom().then(() => {
+        // Verifica se o cupom entrou com sucesso checando o input hidden
+        if (document.getElementById("hiddenCupom").value === codigo) {
+            btnDireto.innerText = "✔️ Aplicado";
+            btnDireto.style.background = "#d1fae5"; // Verde claro de sucesso
+            btnDireto.style.color = "#065f46";
+        } else {
+            // Se falhou (ex: faltou valor mínimo), restaura o botão
+            btnDireto.innerText = "Aplicar ✨";
+            btnDireto.disabled = false;
+        }
+    });
+}

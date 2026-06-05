@@ -58,7 +58,7 @@
                     <input type="password" name="senha_dono" placeholder="Senha inicial" required>
 
                     <label>Telefone WhatsApp (com 55):</label>
-                    <input type="text" name="'telefone_whatsapp" placeholder="Ex: 5511999999999" required>
+                    <input type="text" name="telefone_whatsapp" placeholder="Ex: 5511999999999" required>
 
                     <label> Chave PIX do Restaurante:</label>
                     <input type="text" name="chave_pix" placeholder="E-mail, CPF, Celular, CNPJ..." required>
@@ -91,13 +91,13 @@
                     <tbody>
                         {% for res in restaurantes %}
                         <tr>
-                            <td>#{{ res[0] }}</td>
+                            <td>#{{ res.id }}</td>
                             <td>
-                                <strong>{{ res[1] }}</strong><br>
-                                <small style="color: #94a3b8;">/{{ res[2] }}</small>
+                                <strong>{{ res.nome }}</strong><br>
+                                <small style="color: #94a3b8;">/{{ res.slug }}</small>
                             </td>
                             <td>
-                                {% if res[3] == 'ativo' %}
+                                {% if res.status == 'ativo' %}
                                     <span class="badge badge-ativo">ATIVO</span>
                                 {% else %}
                                     <span class="badge badge-bloqueado">BLOQUEADO</span>
@@ -105,11 +105,11 @@
                             </td>
                             
                             <td>
-                                <form action="/superadmin/mudar_plano/{{ res[0] }}" method="POST" style="display: flex; gap: 5px; align-items: center; margin: 0;">
+                                <form action="/superadmin/mudar_plano/{{ res.id }}" method="POST" style="display: flex; gap: 5px; align-items: center; margin: 0;">
                                     <select name="plano" style="padding: 6px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 6px; font-size: 13px; outline: none;">
-                                        <option value="salao" {% if res[9] == 'salao' or not res[9] or res[9] == 'basico' %}selected{% endif %}>Salão</option>
-                                        <option value="delivery" {% if res[9] == 'delivery' %}selected{% endif %}>Delivery</option>
-                                        <option value="premium" {% if res[9] == 'premium' %}selected{% endif %}>Premium</option>
+                                        <option value="salao" {% if res.plano == 'salao' or not res.plano or res.plano == 'basico' %}selected{% endif %}>Salão</option>
+                                        <option value="delivery" {% if res.plano == 'delivery' %}selected{% endif %}>Delivery</option>
+                                        <option value="premium" {% if res.plano == 'premium' %}selected{% endif %}>Premium</option>
                                     </select>
                                     <button type="submit" title="Salvar Plano" style="background: #0ea5e9; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
                                         🔄
@@ -118,13 +118,13 @@
                             </td>
 
                             <td style="display: flex; gap: 10px;">
-                                <button onclick="abrirConfig('{{ res[0] }}', '{{ res[1] }}', '{{ res[4] }}', '{{ res[5] }}', '{{ res[6] }}', '{{ res[7] }}', '{{ res[8] }}', '{{ res[10] }}', '{{ res[11] }}', '{{ res[12] }}')" style="background: #334155; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">
+                                <button onclick="abrirConfig('{{ res.id }}', '{{ res.nome }}', '{{ res.cor_tema }}', '{{ res.cor_fundo }}', '{{ res.cor_card }}', '{{ res.cor_texto }}', '{{ res.tema_kds }}', '{{ res.cor_texto_botao }}', '{{ res.chave_pix }}', '{{ res.telefone_whatsapp }}')" style="background: #334155; color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer;">
                                     ⚙️ Estilo
                                 </button>
 
-                                <a href="/superadmin/toggle/{{ res[0] }}" 
-                                class="btn-toggle {% if res[3] == 'ativo' %}btn-bloquear{% else %}btn-ativar{% endif %}">
-                                {% if res[3] == 'ativo' %}🚫{% else %}✅{% endif %}
+                                <a href="/superadmin/toggle/{{ res.id }}" 
+                                class="btn-toggle {% if res.status == 'ativo' %}btn-bloquear{% else %}btn-ativar{% endif %}">
+                                {% if res.status == 'ativo' %}🚫{% else %}✅{% endif %}
                                 </a>
                             </td>
                         </tr>
@@ -139,10 +139,9 @@
                         <hr style="border: 0; border-top: 1px solid #334155; margin-bottom: 15px;">
 
                     <form id="formEstilo" method="POST" enctype="multipart/form-data">
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
                                 <div>
-                                    <label>WhatsApp (com 55):</label>
+                                    <label>WhatsApp:</label>
                                     <input type="text" name="telefone_whatsapp" id="inputTelWpp" style="width: 100%; padding: 8px; box-sizing: border-box;">
                                 </div>
                                 <div>
@@ -150,91 +149,78 @@
                                     <input type="text" name="chave_pix" id="inputChavePix" style="width: 100%; padding: 8px; box-sizing: border-box;">
                                 </div>
                             </div>
-                            <div style="flex: 1; min-width: 45%;">
-                                <label>Cor dos Botões:</label>
-                                <input type="color" name="cor_tema" id="inputCorTema" style="height: 40px; width: 100%;">
+                            
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                                <div style="flex: 1; min-width: 45%;">
+                                    <label>Cor Botões:</label>
+                                    <input type="color" name="cor_tema" id="inputCorTema" style="height: 40px; width: 100%;">
+                                </div>
+                                <div style="flex: 1; min-width: 45%;">
+                                    <label>Cor Texto Botão:</label>
+                                    <input type="color" name="cor_texto_botao" id="inputCorTextoBotao" value="#ffffff" style="height: 40px; width: 100%;">
+                                </div>
+                                <div style="flex: 1; min-width: 45%;">
+                                    <label>Cor Fundo:</label>
+                                    <input type="color" name="cor_fundo" id="inputCorFundo" style="height: 40px; width: 100%;">
+                                </div>
+                                <div style="flex: 1; min-width: 45%;">
+                                    <label>Cor Cards:</label>
+                                    <input type="color" name="cor_card" id="inputCorCard" style="height: 40px; width: 100%;">
+                                </div>
+                                <div style="flex: 1; min-width: 100%;">
+                                    <label>Cor Textos:</label>
+                                    <input type="color" name="cor_texto" id="inputCorTexto" style="height: 40px; width: 100%;">
+                                </div>
                             </div>
-                            <div style="flex: 1; min-width: 45%;">
-                                <label>Cor Texto do Botão:</label>
-                                <input type="color" name="cor_texto_botao" id="inputCorTextoBotao" value="#ffffff" style="height: 40px; width: 100%;">
-                            </div>
-                            <div style="flex: 1; min-width: 45%;">
-                                <label>Cor de Fundo (Tela):</label>
-                                <input type="color" name="cor_fundo" id="inputCorFundo" style="height: 40px; width: 100%;">
-                            </div>
-                            <div style="flex: 1; min-width: 45%;">
-                                <label>Cor dos Cards (Balões):</label>
-                                <input type="color" name="cor_card" id="inputCorCard" style="height: 40px; width: 100%;">
-                            </div>
-                            <div style="flex: 1; min-width: 100%;">
-                                <label>Cor dos Títulos (Textos):</label>
-                                <input type="color" name="cor_texto" id="inputCorTexto" style="height: 40px; width: 100%;">
-                            </div>
-                        </div>
 
-                        <label>Tema da Cozinha (KDS):</label>
-                        <select name="tema_kds" id="selectTemaKds" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #334155; border-radius:8px; margin-bottom:20px;">
-                            <option value="dark">Modo Escuro (Padrão)</option>
-                            <option value="light">Modo Claro</option>
-                        </select>
+                            <label>Tema Cozinha (KDS):</label>
+                            <select name="tema_kds" id="selectTemaKds" style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #334155; border-radius:8px; margin-bottom:20px;">
+                                <option value="dark">Modo Escuro</option>
+                                <option value="light">Modo Claro</option>
+                            </select>
 
-                        <label>Logo do Restaurante (PNG Transparente):</label>
-                        <input type="file" name="logo" accept="image/*" style="background: transparent; border: 1px dashed #334155; padding: 10px; color: white; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: inline-flex; align-items: center; cursor: pointer; color: #f87171; font-weight: bold; font-size: 13px;">
-                                <input type="checkbox" name="remover_logo" value="1" style="width: auto; margin: 0 8px 0 0;"> 🗑️ Remover Logo Atual
+                            <label>Logo (PNG):</label>
+                            <input type="file" name="logo" accept="image/*" style="background: transparent; border: 1px dashed #334155; padding: 10px; color: white; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; cursor: pointer; color: #f87171; font-size: 13px; margin-bottom: 15px;">
+                                <input type="checkbox" name="remover_logo" value="1" style="width: auto; margin-right: 8px;"> Remover Logo
                             </label>
-                        </div>
 
-                        <label>Imagem de Fundo (Wallpaper):</label>
-                        <input type="file" name="fundo" accept="image/*" style="background: transparent; border: 1px dashed #334155; padding: 10px; color: white; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
-                        <div style="margin-bottom: 20px;">
-                            <label style="display: inline-flex; align-items: center; cursor: pointer; color: #f87171; font-weight: bold; font-size: 13px;">
-                                <input type="checkbox" name="remover_fundo" value="1" style="width: auto; margin: 0 8px 0 0;"> 🗑️ Remover Fundo Atual
+                            <label>Fundo (Wallpaper):</label>
+                            <input type="file" name="fundo" accept="image/*" style="background: transparent; border: 1px dashed #334155; padding: 10px; color: white; margin-bottom: 5px; width: 100%; box-sizing: border-box;">
+                            <label style="display: flex; align-items: center; cursor: pointer; color: #f87171; font-size: 13px; margin-bottom: 20px;">
+                                <input type="checkbox" name="remover_fundo" value="1" style="width: auto; margin-right: 8px;"> Remover Fundo
                             </label>
-                        </div>
 
-                        <div style="display: flex; gap: 10px;">
-                            <button type="submit" class="btn-cadastrar">💾 Salvar Estilo</button>
-                            <button type="button" onclick="fecharConfig()" style="background:#475569; border:none; color:white; padding:15px; border-radius:8px; cursor:pointer; width: 100%; font-weight: bold;">Cancelar</button>
-                        </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button type="submit" class="btn-cadastrar">💾 Salvar</button>
+                                <button type="button" onclick="fecharConfig()" style="background:#475569; border:none; color:white; padding:15px; border-radius:8px; cursor:pointer; width: 100%; font-weight: bold;">Cancelar</button>
+                            </div>
                     </form>
                 </div>
             </div>
 
             <script>
                 function abrirConfig(id, nome, corTema, corFundo, corCard, corTexto, temaKds, corTextoBotao, chavePix, telWpp) {
-                    // Abre o modal e muda o título
                     document.getElementById('modalConfig').style.display = 'flex';
                     document.getElementById('tituloModal').innerText = 'Configurar: ' + nome;
-                    
-                    // Atualiza a URL do formulário para o ID correto
                     document.getElementById('formEstilo').action = '/superadmin/editar_estilo/' + id;
                     
-                    // Preenche as cores (evitando o 'None' do Python)
-                    if (corTema !== 'None') document.getElementById('inputCorTema').value = corTema;
-                    if (corFundo !== 'None') document.getElementById('inputCorFundo').value = corFundo;
-                    if (corCard !== 'None') document.getElementById('inputCorCard').value = corCard;
-                    if (corTexto !== 'None') document.getElementById('inputCorTexto').value = corTexto;
-                    if (corTextoBotao !== 'None' && document.getElementById('inputCorTextoBotao')) {
-                        document.getElementById('inputCorTextoBotao').value = corTextoBotao;
-                    }
-                    if (temaKds !== 'None') document.getElementById('selectTemaKds').value = temaKds;
+                    if (corTema && corTema !== 'None') document.getElementById('inputCorTema').value = corTema;
+                    if (corFundo && corFundo !== 'None') document.getElementById('inputCorFundo').value = corFundo;
+                    if (corCard && corCard !== 'None') document.getElementById('inputCorCard').value = corCard;
+                    if (corTexto && corTexto !== 'None') document.getElementById('inputCorTexto').value = corTexto;
+                    if (corTextoBotao && corTextoBotao !== 'None') document.getElementById('inputCorTextoBotao').value = corTextoBotao;
+                    if (temaKds && temaKds !== 'None') document.getElementById('selectTemaKds').value = temaKds;
                     
-                    // PREENCHE O PIX E O WHATSAPP NA TELA (A MÁGICA AQUI 👇)
                     document.getElementById('inputChavePix').value = (chavePix !== 'None' && chavePix !== 'null') ? chavePix : '';
                     document.getElementById('inputTelWpp').value = (telWpp !== 'None' && telWpp !== 'null') ? telWpp : '';
                 }
 
                 function fecharConfig() {
                     document.getElementById('modalConfig').style.display = 'none';
-                    document.getElementById('inputChavePix').value = chavePix !== 'None' ? chavePix : '';
-                    document.getElementById('inputTelWpp').value = telWpp !== 'None' ? telWpp : '';
                 }
             </script>
         </div>
-
     </div>
-
 </body>
 </html>

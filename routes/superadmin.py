@@ -2,7 +2,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
-import sqlite3
+from db import get_conexao
+from psycopg2.extras import RealDictCursor
+import psycopg2
 import re
 import os
 
@@ -22,14 +24,14 @@ def superadmin_required(f):
 @superadmin_bp.route("/superadmin")
 @superadmin_required
 def painel_super_admin():
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute("SELECT COUNT(*) FROM restaurantes")
-    total_restaurantes = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as qtd FROM restaurantes")
+    total_restaurantes = cursor.fetchone()['qtd']
 
-    cursor.execute("SELECT COUNT(*) FROM pedidos")
-    total_pedidos_plataforma = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) as qtd FROM pedidos")
+    total_pedidos_plataforma = cursor.fetchone()['qtd']
 
     cursor.execute('''
         SELECT id, nome, slug, status, cor_tema, cor_fundo, cor_card, cor_texto, tema_kds, plano, cor_texto_botao, chave_pix, telefone_whatsapp 
@@ -49,10 +51,10 @@ def painel_super_admin():
 def mudar_plano_restaurante(id_res):
     novo_plano = request.form.get("plano")
     
-    conexao = sqlite3.connect("Autoatendimento.db")
+    conexao = get_conexao()
     cursor = conexao.cursor()
     
-    cursor.execute("UPDATE restaurantes SET plano = ? WHERE id = ?", (novo_plano, id_res))
+    cursor.execute("UPDATE restaurantes SET plano = %s WHERE id = %s", (novo_plano, id_res))
     conexao.commit()
     conexao.close()
     
@@ -62,16 +64,16 @@ def mudar_plano_restaurante(id_res):
 @superadmin_bp.route("/superadmin/toggle/<int:id_res>")
 @superadmin_required
 def toggle_restaurante(id_res):
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
     
-    cursor.execute("SELECT status FROM restaurantes WHERE id = ?", (id_res,))
+    cursor.execute("SELECT status FROM restaurantes WHERE id = %s", (id_res,))
     resultado = cursor.fetchone()
     
     if resultado:
-        status_atual = resultado[0]
+        status_atual = resultado['status']
         novo_status = 'bloqueado' if status_atual == 'ativo' else 'ativo'
-        cursor.execute("UPDATE restaurantes SET status = ? WHERE id = ?", (novo_status, id_res))
+        cursor.execute("UPDATE restaurantes SET status = %s WHERE id = %s", (novo_status, id_res))
         conexao.commit()
     
     conexao.close()
@@ -80,8 +82,8 @@ def toggle_restaurante(id_res):
 @superadmin_bp.route("/superadmin/financeiro")
 @superadmin_required
 def painel_financeiro_saas():
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
     cursor.execute('''
         SELECT id, nome, plano, status, valor_plano, dia_vencimento 
@@ -97,8 +99,8 @@ def painel_financeiro_saas():
     qtd_bloqueados = 0
 
     for c in clientes:
-        status = c[3]
-        valor = c[4] or 0.0
+        status = c['status']
+        valor = float(c['valor_plano']) if c['valor_plano'] else 0.0
         
         if status == 'ativo':
             mrr_total += valor
@@ -120,9 +122,9 @@ def editar_financeiro_cliente(id_res):
     novo_valor = request.form.get("valor_plano", 0.0)
     novo_vencimento = request.form.get("dia_vencimento", 5)
     
-    conexao = sqlite3.connect("Autoatendimento.db")
+    conexao = get_conexao()
     cursor = conexao.cursor()
-    cursor.execute("UPDATE restaurantes SET valor_plano = ?, dia_vencimento = ? WHERE id = ?", (novo_valor, novo_vencimento, id_res))
+    cursor.execute("UPDATE restaurantes SET valor_plano = %s, dia_vencimento = %s WHERE id = %s", (novo_valor, novo_vencimento, id_res))
     conexao.commit()
     conexao.close()
     
@@ -144,30 +146,30 @@ def cadastrar_restaurante():
     slug = re.sub(r'[^\w\s-]', '', slug)
     slug = re.sub(r'[\s_-]+', '-', slug)
 
-    conexao = sqlite3.connect("Autoatendimento.db")
-    cursor = conexao.cursor()
+    conexao = get_conexao()
+    cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
     try:
         cursor.execute('''
             INSERT INTO restaurantes (nome, slug, cor_tema, status, plano, chave_pix, telefone_whatsapp)
-            VALUES (?, ?, ?, 'ativo', ?, ?, ?)
+            VALUES (%s, %s, %s, 'ativo', %s, %s, %s) RETURNING id
         ''', (nome, slug, cor, plano, chave_pix, telefone_whatsapp))
         
-        restaurante_id = cursor.lastrowid 
+        restaurante_id = cursor.fetchone()['id']
 
-        cursor.execute('INSERT INTO categorias (nome, restaurante_id) VALUES (?, ?)', ("Geral", restaurante_id))
+        cursor.execute('INSERT INTO categorias (nome, restaurante_id) VALUES (%s, %s)', ("Geral", restaurante_id))
 
         senha_hash = generate_password_hash(senha)
         
         cursor.execute('''
             INSERT INTO usuarios (email, senha, restaurante_id, tipo)
-            VALUES (?, ?, ?, 'restaurante')
+            VALUES (%s, %s, %s, 'restaurante')
         ''', (email, senha_hash, restaurante_id))
 
         conexao.commit()
         flash(f"Sucesso! {nome} agora é seu cliente.", "success")
         
-    except sqlite3.IntegrityError:
+    except psycopg2.IntegrityError:
         conexao.rollback()
         flash("Erro: Esse nome ou e-mail já estão em uso.", "danger")
     finally:
@@ -193,39 +195,39 @@ def editar_estilo_restaurante(id_res):
     logo = request.files.get("logo")
     fundo = request.files.get("fundo")
 
-    conexao = sqlite3.connect("Autoatendimento.db")
+    conexao = get_conexao()
     cursor = conexao.cursor()
 
-    campos_sql = ["cor_tema = ?", "tema_kds = ?", "cor_fundo = ?", "cor_card = ?", "cor_texto = ?", "cor_texto_botao = ?", "chave_pix = ?", "telefone_whatsapp = ?"]
+    campos_sql = ["cor_tema = %s", "tema_kds = %s", "cor_fundo = %s", "cor_card = %s", "cor_texto = %s", "cor_texto_botao = %s", "chave_pix = %s", "telefone_whatsapp = %s"]
     valores_sql = [nova_cor, novo_tema_kds, nova_cor_fundo, nova_cor_card, nova_cor_texto, nova_cor_texto_botao, nova_chave_pix, novo_telefone]
 
     os.makedirs(current_app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     try:
         if remover_logo == "1":
-            campos_sql.append("logo = ?")
+            campos_sql.append("logo = %s")
             valores_sql.append(None)
         elif logo and logo.filename != "":
             nome_seguro = secure_filename(logo.filename)
             nome_arquivo = f"logo_{id_res}_{nome_seguro}"
             caminho = os.path.join(current_app.config['UPLOAD_FOLDER'], nome_arquivo)
             logo.save(caminho)
-            campos_sql.append("logo = ?")
+            campos_sql.append("logo = %s")
             valores_sql.append(f"uploads/{nome_arquivo}")
 
         if remover_fundo == "1":
-            campos_sql.append("fundo_imagem = ?")
+            campos_sql.append("fundo_imagem = %s")
             valores_sql.append(None)
         elif fundo and fundo.filename != "":
             nome_seguro = secure_filename(fundo.filename)
             nome_arquivo = f"fundo_{id_res}_{nome_seguro}"
             caminho = os.path.join(current_app.config['UPLOAD_FOLDER'], nome_arquivo)
             fundo.save(caminho)
-            campos_sql.append("fundo_imagem = ?")
+            campos_sql.append("fundo_imagem = %s")
             valores_sql.append(f"uploads/{nome_arquivo}")
 
         valores_sql.append(id_res)
-        query = f"UPDATE restaurantes SET {', '.join(campos_sql)} WHERE id = ?"
+        query = f"UPDATE restaurantes SET {', '.join(campos_sql)} WHERE id = %s"
         
         cursor.execute(query, tuple(valores_sql))
         conexao.commit()
