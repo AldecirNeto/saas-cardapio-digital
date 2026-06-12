@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.utils import secure_filename
 from PIL import Image
 from datetime import datetime
+from functools import wraps
 from collections import Counter
 from db import get_conexao
 from psycopg2.extras import RealDictCursor
@@ -11,6 +12,26 @@ import csv
 import io
 
 admin_bp = Blueprint('admin', __name__)
+
+def premium_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'restaurante_id' not in session:
+            return redirect(url_for('auth.login'))
+            
+        conexao = get_conexao()
+        cursor = conexao.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("SELECT plano FROM restaurantes WHERE id = %s", (session['restaurante_id'],))
+        res = cursor.fetchone()
+        conexao.close()
+        
+        if not res or res['plano'] != 'premium':
+            flash("Esta funcionalidade é exclusiva do plano Premium.", "danger")
+            return redirect(url_for('admin.painel_admin'))
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 @admin_bp.route("/admin")
 def painel_admin():
@@ -318,6 +339,7 @@ def painel_crm_clientes():
 
 
 @admin_bp.route("/admin/clientes/exportar")
+@premium_required
 def exportar_clientes_csv():
     if 'usuario_id' not in session or 'restaurante_id' not in session:
         return redirect(url_for('auth.login'))
@@ -420,6 +442,7 @@ def painel_cupons():
 
 
 @admin_bp.route("/admin/cupons/novo", methods=["POST"])
+@premium_required
 def adicionar_cupom():
     if 'usuario_id' not in session: return redirect(url_for('auth.login'))
 
@@ -455,6 +478,7 @@ def adicionar_cupom():
 
 
 @admin_bp.route("/admin/cupons/toggle/<int:id_cupom>")
+@premium_required
 def toogle_cupom(id_cupom):
     if 'usuario_id' not in session: return redirect(url_for('auth.login'))
     restaurante_id = session['restaurante_id']
@@ -474,6 +498,7 @@ def toogle_cupom(id_cupom):
 
 
 @admin_bp.route("/admin/cupons/excluir/<int:id_cupom>", methods=["POST"])
+@premium_required
 def excluir_cupom(id_cupom):
     if 'usuario_id' not in session: return redirect(url_for('auth.login'))
     restaurante_id = session['restaurante_id']
@@ -489,13 +514,22 @@ def excluir_cupom(id_cupom):
 
 @admin_bp.route('/admin/produto/<int:produto_id>/opcoes', methods=['GET', 'POST'])
 def gerenciar_opcoes(produto_id):
+    if 'restaurante_id' not in session:
+        return redirect(url_for('auth.login'))
+        
     conexao = get_conexao()
     cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
-    cursor.execute("SELECT nome, categoria FROM cardapio WHERE id = %s", (produto_id,))
+    # TRAVA DE SEGURANÇA MULTI-TENANT
+    cursor.execute("SELECT nome, categoria FROM cardapio WHERE id = %s AND restaurante_id = %s", (produto_id, session['restaurante_id']))
     produto = cursor.fetchone()
-    produto_nome = produto['nome'] if produto else "Produto"
-    produto_categoria = produto['categoria'] if produto else ""
+    
+    if not produto:
+        conexao.close()
+        return redirect(url_for('admin.painel_admin'))
+
+    produto_nome = produto['nome']
+    produto_categoria = produto['categoria']
 
     if request.method == 'POST':
         tipo = request.form.get('tipo')
@@ -550,30 +584,45 @@ def gerenciar_opcoes(produto_id):
 
 @admin_bp.route('/admin/deletar_opcao/<tipo>/<int:id_opcao>/<int:produto_id>')
 def deletar_opcao(tipo, id_opcao, produto_id):
+    if 'restaurante_id' not in session: return redirect(url_for('auth.login'))
     conexao = get_conexao()
     cursor = conexao.cursor()
-    if tipo == 'variacao':
-        cursor.execute("DELETE FROM variacoes WHERE id = %s", (id_opcao,))
-    elif tipo == 'complemento':
-        cursor.execute("DELETE FROM complementos WHERE id = %s", (id_opcao,))
-    conexao.commit()
+    
+    cursor.execute("SELECT id FROM cardapio WHERE id = %s AND restaurante_id = %s", (produto_id, session['restaurante_id']))
+    if cursor.fetchone():
+        if tipo == 'variacao':
+            cursor.execute("DELETE FROM variacoes WHERE id = %s", (id_opcao,))
+        elif tipo == 'complemento':
+            cursor.execute("DELETE FROM complementos WHERE id = %s", (id_opcao,))
+        conexao.commit()
+        
     conexao.close()
     return redirect(url_for('admin.gerenciar_opcoes', produto_id=produto_id))
 
 @admin_bp.route('/admin/ocultar_opcao/<tipo>/<int:id_opcao>/<int:produto_id>')
 def ocultar_opcao(tipo, id_opcao, produto_id):
+    if 'restaurante_id' not in session: return redirect(url_for('auth.login'))
     conexao = get_conexao()
     cursor = conexao.cursor()
-    cursor.execute("INSERT INTO opcoes_ocultas (produto_id, tipo_opcao, opcao_id) VALUES (%s, %s, %s)", (produto_id, tipo, id_opcao))
-    conexao.commit()
+    
+    cursor.execute("SELECT id FROM cardapio WHERE id = %s AND restaurante_id = %s", (produto_id, session['restaurante_id']))
+    if cursor.fetchone():
+        cursor.execute("INSERT INTO opcoes_ocultas (produto_id, tipo_opcao, opcao_id) VALUES (%s, %s, %s)", (produto_id, tipo, id_opcao))
+        conexao.commit()
+        
     conexao.close()
     return redirect(url_for('admin.gerenciar_opcoes', produto_id=produto_id))
 
 @admin_bp.route('/admin/restaurar_opcao/<tipo>/<int:id_opcao>/<int:produto_id>')
 def restaurar_opcao(tipo, id_opcao, produto_id):
+    if 'restaurante_id' not in session: return redirect(url_for('auth.login'))
     conexao = get_conexao()
     cursor = conexao.cursor()
-    cursor.execute("DELETE FROM opcoes_ocultas WHERE produto_id = %s AND tipo_opcao = %s AND opcao_id = %s", (produto_id, tipo, id_opcao))
-    conexao.commit()
+    
+    cursor.execute("SELECT id FROM cardapio WHERE id = %s AND restaurante_id = %s", (produto_id, session['restaurante_id']))
+    if cursor.fetchone():
+        cursor.execute("DELETE FROM opcoes_ocultas WHERE produto_id = %s AND tipo_opcao = %s AND opcao_id = %s", (produto_id, tipo, id_opcao))
+        conexao.commit()
+        
     conexao.close()
     return redirect(url_for('admin.gerenciar_opcoes', produto_id=produto_id))

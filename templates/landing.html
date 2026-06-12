@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Menu | Seu Cardápio Inteligente</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        
+        :root {
+            --primary: #e67e22;
+            --primary-hover: #d35400;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --text-muted: #64748b;
+        }
+
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background-color: var(--light); color: var(--dark); }
+
+        /* Header */
+        .navbar { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.03); position: sticky; top: 0; z-index: 1000; }
+        .logo { font-size: 22px; font-weight: 800; color: var(--dark); text-decoration: none; }
+        .logo span { color: var(--primary); }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a.link-simples { color: var(--text-muted); text-decoration: none; font-weight: 600; }
+        .btn-login { background: transparent; color: var(--dark); border: 2px solid var(--dark); padding: 10px 22px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; transition: 0.2s; }
+        .btn-login:hover { background: var(--dark); color: white; }
+
+        /* Hero */
+        .hero { max-width: 1200px; margin: 0 auto; padding: 100px 40px; text-align: center; }
+        .hero h1 { font-size: 48px; font-weight: 800; line-height: 1.2; margin-bottom: 20px; letter-spacing: -1px; }
+        .hero h1 span { color: var(--primary); }
+        .hero p { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 auto 40px auto; line-height: 1.6; }
+        .btn-cta { background: var(--primary); color: white; padding: 16px 36px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 18px; box-shadow: 0 4px 14px rgba(230, 126, 34, 0.4); transition: 0.2s; display: inline-block;}
+        .btn-cta:hover { background: var(--primary-hover); }
+
+        /* Features */
+        .features { background: white; padding: 80px 40px; }
+        .features-grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 30px; }
+        .card { padding: 30px; border-radius: 12px; background: var(--light); border: 1px solid #e2e8f0; }
+        .card h3 { margin-top: 0; font-size: 20px; font-weight: 700; }
+        .card p { color: var(--text-muted); font-size: 15px; line-height: 1.5; margin-bottom: 0; }
+
+        /* Planos (Pricing) */
+        .pricing { background: var(--dark); color: white; padding: 100px 40px; text-align: center; }
+        .pricing h2 { font-size: 36px; margin-top: 0; margin-bottom: 50px; }
+        .pricing-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+        .plan-card { background: #1e293b; padding: 40px; border-radius: 12px; border: 1px solid #334155; text-align: left; position: relative;}
+        .plan-card.premium { border-color: var(--primary); box-shadow: 0 0 25px rgba(230, 126, 34, 0.15); transform: translateY(-10px);}
+        .badge-pop { position: absolute; top: -15px; right: 20px; background: var(--primary); color: white; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        .plan-title { font-size: 22px; font-weight: 700; margin: 0; color: #f8fafc;}
+        .plan-price { font-size: 44px; font-weight: 800; margin: 15px 0; }
+        .plan-price span { font-size: 16px; font-weight: 400; color: #94a3b8; }
+        .plan-features { list-style: none; padding: 0; margin: 0 0 30px 0; color: #cbd5e1; font-size: 15px; line-height: 1.8;}
+        .btn-plan { display: block; text-align: center; background: transparent; border: 2px solid white; color: white; padding: 14px; border-radius: 8px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        .plan-card.premium .btn-plan { background: var(--primary); border-color: var(--primary); }
+        .btn-plan:hover { background: white; color: var(--dark); }
+        .plan-card.premium .btn-plan:hover { background: var(--primary-hover); color: white; }
+
+        /* Contato / Footer */
+        .contact { padding: 80px 40px; text-align: center; background: white; border-top: 1px solid #e2e8f0;}
+        .contact h2 { font-size: 32px; margin-top: 0; margin-bottom: 20px; }
+        .contact p { color: var(--text-muted); font-size: 18px; margin-bottom: 30px; }
+        .btn-whatsapp { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #25D366; color: white; padding: 16px 36px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 18px; transition: 0.2s; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.3);}
+        .btn-whatsapp:hover { background: #1ebd57; transform: translateY(-2px);}
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 32px; }
+            .navbar { padding: 15px 20px; }
+            .nav-links a.link-simples { display: none; }
+            .plan-card.premium { transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="#" class="logo">🚀 Digital<span>Menu</span></a>
+        <div class="nav-links">
+            <a href="#planos" class="link-simples">Planos</a>
+            <a href="{{ url_for('auth.login') }}" class="btn-login">Área do Lojista</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <h1>Transforme mesas em vendas com um <br><span>Cardápio Digital Inteligente</span></h1>
+        <p>A plataforma multi-tenant completa com painel para cozinha, painel para caixa, motor de cupons avançado e CRM integrado.</p>
+        <a href="#planos" class="btn-cta">Ver Planos e Preços</a>
+    </section>
+
+    <section class="features">
+        <div class="features-grid">
+            <div class="card">
+                <h3>📱 Cardápio Mobile-First</h3>
+                <p>Experiência fluida direto do celular do cliente. Checkout veloz com chave pix no cardápio e validação via Whatsapp, suporte a variações de produtos.</p>
+            </div>
+            <div class="card">
+                <h3>🔥 Painel Cozinha & Caixa</h3>
+                <p>Gestão de pedidos em tempo real para a cozinha e controle financeiro integrado para o operador de caixa. Sem confusão de papel.</p>
+            </div>
+            <div class="card">
+                <h3>👑 CRM & Cupons Premium</h3>
+                <p>Capture contatos e monte regras agressivas de fidelização baseadas no comportamento de compra e recorrência do cliente.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="pricing" id="planos">
+        <h2>Planos feitos para o seu tamanho</h2>
+        <div class="pricing-grid">
+            
+            <div class="plan-card">
+                <p class="plan-title">Essencial</p>
+                <div class="plan-price">R$ 94,90<span>/mês</span></div>
+                <ul class="plan-features">
+                    <li>✔️ Cardápio Digital com QR Code</li>
+                    <li>✔️ Gestão de Complementos e Variações</li>
+                    <li>✔️ Painel KDS (Tela da Cozinha)</li>
+                    <li>✔️ Painel PDV (Caixa e Recebimentos)</li>
+                    <li style="color: #64748b;">❌ Motor de Cupons</li>
+                    <li style="color: #64748b;">❌ CRM e Exportação de Leads</li>
+                </ul>
+                <a href="#contato" class="btn-plan">Assinar Essencial</a>
+            </div>
+
+            <div class="plan-card premium">
+                <div class="badge-pop">Mais Popular</div>
+                <p class="plan-title">Premium 👑</p>
+                <div class="plan-price">R$ 149,90<span>/mês</span></div>
+                <ul class="plan-features">
+                    <li>✔️ <b>Tudo do plano Essencial</b></li>
+                    <li>✔️ <b>CRM Inteligente:</b> Histórico de clientes</li>
+                    <li>✔️ <b>Exportação de Leads</b> para excela</li>
+                    <li>✔️ <b>Motor de Cupons Avançado</b></li>
+                    <li>✔️ Trava de Leads (Exige telefone para promo)</li>
+                    <li>✔️ Suporte Prioritário</li>
+                </ul>
+                <a href="#contato" class="btn-plan">Quero ser Premium</a>
+            </div>
+
+        </div>
+    </section>
+
+    <section class="contact" id="contato">
+        <h2>Pronto para modernizar seu comércio?</h2>
+        <p>Fale direto com nosso time de vendas pelo WhatsApp e agende uma demonstração gratuita do sistema funcionando na prática.</p>
+        <a href="https://wa.me/11980516737?text=Olá!%20Tenho%20interesse%20no%20SaaS%20Digital%20Menu." target="_blank" class="btn-whatsapp">
+            💬 Falar com um Consultor
+        </a>
+    </section>
+
+</body>
+</html>

@@ -11,7 +11,7 @@ def login():
     if request.method == "POST":
         email = request.form.get("email")
         senha = request.form.get("senha")
-        print(f"\n🕵️ 1. TENTATIVA DE LOGIN: E-mail -> {email}")
+        print(f"\n1. TENTATIVA DE LOGIN: E-mail -> {email}")
 
         conexao = get_conexao()
         cursor = conexao.cursor(cursor_factory=RealDictCursor)

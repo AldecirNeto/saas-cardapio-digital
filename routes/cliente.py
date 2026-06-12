@@ -193,10 +193,19 @@ def verificar_recompensas():
     conexao = get_conexao()
     cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
+    # TRAVA PREMIUM (Ignora maiúsculas e espaços)
+    cursor.execute("SELECT plano FROM restaurantes WHERE id = %s", (res_id,))
+    res_plano = cursor.fetchone()
+    
+    plano = str(res_plano['plano']).strip().lower() if res_plano and res_plano.get('plano') else ''
+    if plano != 'premium':
+        conexao.close()
+        return jsonify({"status": "vazio"})
+
+    # LÓGICA ORIGINAL DE BUSCA
     cursor.execute("SELECT COUNT(id) as qtd FROM pedidos WHERE restaurante_id = %s AND telefone_cliente = %s", (res_id, tel))
     proximo = cursor.fetchone()['qtd'] + 1
 
-    # Busca cupom por meta ou o último global
     cursor.execute("""
         SELECT * FROM cupons 
         WHERE restaurante_id = %s AND status = 'ativo' AND (meta_pedidos = %s OR tipo_limite = 'global')
@@ -228,6 +237,16 @@ def validar_cupom():
         conexao = get_conexao()
         cursor = conexao.cursor(cursor_factory=RealDictCursor)
 
+        # TRAVA PREMIUM (Ignora maiúsculas e espaços)
+        cursor.execute("SELECT plano FROM restaurantes WHERE id = %s", (restaurante_id,))
+        res_plano = cursor.fetchone()
+        
+        plano = str(res_plano['plano']).strip().lower() if res_plano and res_plano.get('plano') else ''
+        if plano != 'premium':
+            conexao.close()
+            return jsonify({"status": "erro", "mensagem": "Funcionalidade indisponível para este estabelecimento."})
+
+        # LÓGICA ORIGINAL DE VALIDAÇÃO
         cursor.execute("""
             SELECT * FROM cupons WHERE codigo = %s AND restaurante_id = %s
         """, (codigo, restaurante_id))
@@ -241,7 +260,6 @@ def validar_cupom():
             conexao.close()
             return jsonify({"status": "erro", "mensagem": "Cupom inativo."})
 
-        # No Postgres, comparamos datas diretamente
         if cupom['validade'] and datetime.now().date() > cupom['validade']:
             conexao.close()
             return jsonify({"status": "erro", "mensagem": "Cupom expirou."})
@@ -305,12 +323,19 @@ def finalizar_pedido():
     try:
         # Lógica de Cupom
         if codigo_cupom:
-            cursor.execute("SELECT id, status, tipo, valor FROM cupons WHERE codigo = %s AND restaurante_id = %s", (codigo_cupom.upper(), res_id))
-            cupom = cursor.fetchone()
-            if cupom and cupom[1] == 'ativo':
-                desconto = total * (float(cupom[3]) / 100) if cupom[2] == 'porcentagem' else float(cupom[3])
-                total -= desconto
-                cursor.execute("UPDATE cupons SET qtd_usos = qtd_usos + 1 WHERE id = %s", (cupom[0],))
+            # TRAVA PREMIUM: Valida o plano antes de aplicar o desconto no banco
+            cursor.execute("SELECT plano FROM restaurantes WHERE id = %s", (res_id,))
+            res_plano = cursor.fetchone()
+            
+            if res_plano and res_plano[0] == 'premium':
+                cursor.execute("SELECT id, status, tipo, valor FROM cupons WHERE codigo = %s AND restaurante_id = %s", (codigo_cupom.upper(), res_id))
+                cupom = cursor.fetchone()
+                if cupom and cupom[1] == 'ativo':
+                    desconto = total * (float(cupom[3]) / 100) if cupom[2] == 'porcentagem' else float(cupom[3])
+                    total -= desconto
+                    cursor.execute("UPDATE cupons SET qtd_usos = qtd_usos + 1 WHERE id = %s", (cupom[0],))
+            else:
+                print(f"⚠️ Tentativa de bypass: Cupom ignorado (restaurante não-premium ID: {res_id})")
 
         status_txt = f"pendente - {forma_pagamento}"
         itens_txt = ", ".join(nome_itens)

@@ -1,7 +1,10 @@
-from flask import Flask
+from flask import Flask, render_template
 import os
+from dotenv import load_dotenv
 
-#  IMPORTANDO OS NOSSOS MÓDULOS (BLUEPRINTS)
+load_dotenv()
+
+# IMPORTANDO OS NOSSOS MÓDULOS (BLUEPRINTS)
 from routes.auth import auth_bp
 from routes.operacao import operacao_bp
 from routes.superadmin import superadmin_bp
@@ -10,7 +13,8 @@ from routes.cliente import cliente_bp
 
 # INICIALIZANDO O NÚCLEO DO SISTEMA
 app = Flask(__name__)
-app.secret_key = "dslgjkweovmxczfwti23lsd13550sfsplgkqwe"
+# AJUSTE AQUI: "SECRET_KEY" é o nome que vai na hospedagem, a sua senha vira o fallback local
+app.secret_key = os.getenv("SECRET_KEY", "dslgjkweovmxczfwti23lsd13550sfsplgkqwe")
 
 # 3. CONFIGURAÇÕES DE UPLOAD
 PASTA_UPLOADS = os.path.join('static', 'uploads')
@@ -24,6 +28,9 @@ app.register_blueprint(admin_bp)
 app.register_blueprint(cliente_bp)
 
 # 5. RODANDO O SERVIDOR
+@app.route('/')
+def landing_page():
+    return render_template("landing.html")
 
 @app.route('/teste')
 def teste():

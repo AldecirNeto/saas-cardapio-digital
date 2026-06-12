@@ -21,3 +21,13 @@ Um sistema Multi-Tenant de Cardápio Digital desenvolvido para restaurantes. A p
 1. Clone o repositório:
 ```bash
 git clone [https://github.com/AldecirNeto/saas-cardapio-digital.git](https://github.com/AldecirNeto/saas-cardapio-digital.git)
+
+2. Instale as dependencias:
+
+pip install -r requirements.txt
+
+3.Configure as variáveis de ambiente no arquivo .env (credenciais do banco e chaves secretas).
+
+4. Inicie o servidor:
+python app.py
+
