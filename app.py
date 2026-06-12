@@ -13,7 +13,6 @@ from routes.cliente import cliente_bp
 
 # INICIALIZANDO O NÚCLEO DO SISTEMA
 app = Flask(__name__)
-# AJUSTE AQUI: "SECRET_KEY" é o nome que vai na hospedagem, a sua senha vira o fallback local
 app.secret_key = os.getenv("SECRET_KEY", "dslgjkweovmxczfwti23lsd13550sfsplgkqwe")
 
 # 3. CONFIGURAÇÕES DE UPLOAD
