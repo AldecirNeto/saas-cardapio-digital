@@ -13,7 +13,7 @@ from routes.cliente import cliente_bp
 
 # INICIALIZANDO O NÚCLEO DO SISTEMA
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "dslgjkweovmxczfwti23lsd13550sfsplgkqwe")
+app.secret_key = os.getenv("SECRET_KEY")
 
 # 3. CONFIGURAÇÕES DE UPLOAD
 PASTA_UPLOADS = os.path.join('static', 'uploads')
